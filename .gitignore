@@ -1,0 +1,11 @@
+# Ignorar todos los directorios 'target' de Cargo en cualquier subcarpeta
+**/target/
+
+# Ignorar archivos del editor o del sistema operativo
+.DS_Store
+*.log
+.vscode/
+.idea/
+
+# Ignorar archivos de entorno
+.env
