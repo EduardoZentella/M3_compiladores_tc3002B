@@ -9,3 +9,7 @@
 
 # Ignorar archivos de entorno
 .env
+
+# Ignorar archivos descriptivos de desarrollo
+**/descripcion_desarrollo.md
+**/descripcion_desarrollo.txt
