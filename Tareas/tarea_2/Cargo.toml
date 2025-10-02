@@ -1,0 +1,11 @@
+[package]
+name = "tarea_2"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+lalrpop-util = { version = "0.20.0", features = ["lexer"] }
+regex = "1.10.3"
+
+[build-dependencies]
+lalrpop = { version = "0.20.0", features = ["lexer"] }

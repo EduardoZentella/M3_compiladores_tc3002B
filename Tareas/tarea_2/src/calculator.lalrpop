@@ -1,0 +1,45 @@
+// src/calculator.lalrpop
+use std::str::FromStr;
+use lalrpop_util::ParseError;
+
+// Define la gramática y especifica que el parser se llamará 'ExprParser'
+grammar;
+
+// El lexer de LALRPOP ignora por defecto los espacios en blanco que coinciden con r"\s*".
+// Se define un token 'Num' que coincide con uno o más dígitos y otros operadores.
+match {
+    r"[0-9]+" => Num,
+    "+" => "+",
+    "-" => "-",
+    "*" => "*",
+    "/" => "/",
+    "(" => "(",
+    ")" => ")",
+}
+// El punto de entrada de la gramática es 'Expr'. El tipo de retorno será i32.
+// 'Expr' maneja la suma y la resta, y da menor precedencia a estos operadores.
+// Esto significa que las sumas y restas se evaluarán después de multiplicaciones y divisiones.
+pub Expr: i32 = {
+  <l:Term> "+" <r:Expr> => l + r,
+  <l:Term> "-" <r:Expr> => l - r,
+  Term,
+};
+
+// 'Term' representa las operaciones de multiplicación y división.
+// Tiene mayor precedencia que 'Expr', por lo que estas operaciones se evaluarán antes que sumas y restas.
+Term: i32 = {
+  <l:Factor> "*" <r:Term> => l * r,
+  <l:Factor> "/" <r:Term> => l / r,
+  Factor,
+};
+
+// 'Factor' es la unidad más básica de la gramática.
+// Puede ser un número entero (Num) o una expresión entre paréntesis.
+// Si es un número, se intenta convertir la cadena a i32 y se maneja el error si la conversión falla.
+// Si es una expresión entre paréntesis, se evalúa recursivamente.
+Factor: i32 = {
+  Num =>? i32::from_str(<>).map_err(|_| ParseError::User {
+    error: "Número inválido o demasiado grande",
+  }),
+  "(" <Expr> ")" => <>,
+};
