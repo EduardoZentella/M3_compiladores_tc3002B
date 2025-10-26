@@ -1,0 +1,84 @@
+<Programa> → programa id ; <VARS_OPT> <FUNCS_LIST> inicio <CUERPO> fin
+<VARS_OPT> → <VARS>
+<VARS_OPT> → ε
+<FUNCS_LIST> → <FUNCS><FUNCS_LIST>
+<FUNCS_LIST> → ε
+
+<VARS> → vars <VAR_LIST> : <TIPO>;
+<VAR_LIST> → id <VAR_LIST'>
+<VAR_LIST'> → , id <VAR_LIST'>
+<VAR_LIST'> → ε
+
+<TIPO> → entero
+<TIPO> → flotante
+
+<CUERPO> → { <ESTATUTO_LIST> }
+<ESTATUTO_LIST> → <ESTATUTO> <ESTATUTO_LIST>
+<ESTATUTO_LIST> → ε
+
+<ESTATUTO> → <ASIGNA>
+<ESTATUTO> → <CONDICIÓN>
+<ESTATUTO> → <CICLO>
+<ESTATUTO> → <LLAMADA> ;
+<ESTATUTO> → <IMPRIME>
+<ESTATUTO> → [ <ESTATUTO_LIST> ]
+
+<IMPRIME> → escribe ( <OBJ_IMPRIME>  <IMPRIME_LIST> ) ;
+<OBJ_IMPRIME> → <EXPRESIÓN>
+<OBJ_IMPRIME> → letrero
+<IMPRIME_LIST> → , <OBJ_IMPRIME> <IMPRIME_LIST>
+<IMPRIME_LIST> → ε
+
+<ASIGNA> → id = <EXPRESIÓN> ;
+
+<CICLO> → mientras ( <EXPRESIÓN> ) haz <CUERPO>
+
+<CONDICIÓN> → si ( <EXPRESIÓN> ) entonces <CUERPO> <SINO_OPT> ;
+<SINO_OPT> → sino <CUERPO>
+<SINO_OPT> → ε
+
+<EXPRESIÓN> → <EXP> <EXPRESIÓN'>
+<EXPRESIÓN'> → <OPERADOR> <EXP>
+<EXPRESIÓN'> → ε
+<OPERADOR> → >
+<OPERADOR> → <
+<OPERADOR> → ==
+<OPERADOR> → !=
+
+<CTE> → cte_ent
+<CTE> → cte_flot
+
+<EXP> → <TÉRMINO> <EXP’>
+<EXP’> → <+-> <TÉRMINO> <EXP’>
+<EXP’> → ε
+<+-> → +
+<+-> → -
+
+<TÉRMINO> → <FACTOR> <TÉRMINO'>
+<TÉRMINO'> → <*/> <FACTOR> <TÉRMINO'>
+<TÉRMINO'> → ε
+<*/> → *
+<*/> → /
+
+<FACTOR> → ( <EXPRESIÓN> )
+<FACTOR> → <+-_OPT> <CTE_OPT>
+<FACTOR> → <LLAMADA>
+<+-_OPT> → <+->
+<+-_OPT> → ε
+<CTE_OPT> → id
+<CTE_OPT> → <CTE>
+
+<FUNCS> → <TIPO_OPT> id ( <ARG_OPT> ) { <VARS_OPT> <CUERPO> } ;
+<TIPO_OPT> → nula
+<TIPO_OPT> → <TIPO>
+<ARG_OPT> → <ARG_LIST>
+<ARG_OPT> → ε
+<ARG_LIST> → id : <TIPO> <ARG_LIST’>
+<ARG_LIST’> → , <ARG_LIST>
+<ARG_LIST’> → ε
+
+<LLAMADA> → id ( <EXPRESIÓN_OPT> )
+<EXPRESIÓN_OPT> → <EXPRESIÓN> <EXPRESIÓN_LIST>
+<EXPRESION_OPT> → ε
+<EXPRESIÓN_LIST> → , <EXPRESIÓN> <EXPRESIÓN_LIST>
+<EXPRESIÓN_LIST> → ε
