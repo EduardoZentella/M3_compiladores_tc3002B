@@ -2,11 +2,14 @@ pub mod tabla_slr;
 
 use crate::lexico::token::Token;
 use crate::sintactico::tabla_slr::{TABLA_ACTION, TABLA_GOTO, PRODUCCIONES, Accion};
+use crate::semantico::ContextoSemantico;
+
 
 /// Analiza una secuencia de tokens usando el analizador sintáctico SLR
 pub fn analyze(tokens: &[Token], is_verbose: &bool) -> Result<(), String> {
     let mut pila_estados: Vec<usize> = vec![0]; // Pila de estados, inicia en estado 0
     let mut cursor = 0; // Posición actual en el vector de tokens
+    let mut contexto = ContextoSemantico::new();
 
     if *is_verbose {
         println!("\n=== Iniciando análisis sintáctico SLR ===");
@@ -56,6 +59,9 @@ pub fn analyze(tokens: &[Token], is_verbose: &bool) -> Result<(), String> {
                     println!("  → Acción: Reduce({}) - {} → {} símbolos",
                              num_regla, regla.cabeza, regla.longitud_cuerpo);
                 }
+
+                // TODO: Ejecutar acción semántica
+                // ejecutar_accion_semantica(num_regla, &tokens, cursor, &mut contexto)?;
 
                 // Sacar (pop) 'longitud_cuerpo' estados de la pila
                 for _ in 0..regla.longitud_cuerpo {
@@ -108,5 +114,26 @@ pub fn analyze(tokens: &[Token], is_verbose: &bool) -> Result<(), String> {
                 return Err(mensaje);
             }
         }
+    }
+}
+
+/// Ejecuta la acción semántica asociada a una regla de producción
+/// # Argumentos
+/// * `num_regla` - Número de la regla de producción
+/// * `tokens` - Vector de tokens
+/// * `cursor` - Posición actual en el vector de tokens
+/// * `contexto` - Contexto semántico para almacenar información
+/// # Retorna
+/// * `Ok(())` si la acción se ejecuta correctamente
+/// * `Err(String)` si ocurre un error semántico
+fn ejecutar_accion_semantica(
+    num_regla: usize,
+    tokens: &[Token],
+    cursor: usize,
+    contexto: &mut ContextoSemantico,
+) -> Result<(), String> {
+    match num_regla {
+        // TODO: Implementar acciones semánticas según las reglas de producción
+        _ => Ok(()),
     }
 }

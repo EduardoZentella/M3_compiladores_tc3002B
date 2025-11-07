@@ -1,31 +1,51 @@
-# Compilador en Rust
+# Compilador Patito en Rust
 
 ## 📋 Descripción
 
-Este proyecto implementa un **compilador completo** para un lenguaje de programación estructurado simple, desarrollado en Rust. El compilador incluye las fases de análisis léxico, análisis sintáctico SLR(1), y generación automática de tablas de parsing.
+Este proyecto implementa un **compilador completo** para el lenguaje de programación **Patito**, desarrollado en Rust. El compilador incluye las fases de análisis léxico, análisis sintáctico SLR(1), **análisis semántico**, y generación automática de tablas de parsing.
 
 ## 🎯 Características
 
-- **Análisis Léxico**: Tokenización completa con reconocimiento de palabras reservadas, identificadores, constantes y operadores
-- **Análisis Sintáctico SLR(1)**: Parser de tabla que valida la estructura sintáctica del código fuente
-- **Generación Automática**: Construcción automática de autómatas LR(0) y tablas SLR
-- **Cálculo de Conjuntos**: FIRST y FOLLOW sets para gramáticas libres de contexto
-- **Manejo de Errores**: Reportes detallados de errores léxicos y sintácticos con números de línea
+### Análisis Léxico
+
+- Tokenización completa con reconocimiento de palabras reservadas, identificadores, constantes y operadores
+- Manejo de errores con números de línea
+
+### Análisis Sintáctico SLR(1)
+
+- Parser de tabla que valida la estructura sintáctica del código fuente
+- Generación automática de autómatas LR(0) y tablas SLR
+- Cálculo de conjuntos FIRST y FOLLOW
+- Reportes detallados de errores sintácticos
+
+### Análisis Semántico
+
+- **Cubo Semántico**: Validación de tipos en todas las operaciones
+- **Tabla de Variables**: Gestión de variables por alcance con HashMap (O(1))
+- **Directorio de Funciones**: Gestión de funciones y alcances
+- **Contexto Semántico**: Coordinación del análisis durante el parsing
+- **Validaciones**:
+  - Variables doblemente declaradas
+  - Variables no declaradas
+  - Funciones duplicadas
+  - Tipos incompatibles en operaciones
+  - Asignaciones con truncamiento (rechazadas)
+  - Promoción de tipos (entero → flotante)
 
 ## 🏗️ Estructura del Proyecto
 
 ```
 compilador_rust/
 ├── src/
-│   ├── bin/              # Ejecutables y programas de prueba
-│   ├── gramatica/        # Parsing y análisis de gramáticas
-│   ├── lexico/           # Análisis léxico (tokenización)
-│   ├── sintactico/       # Análisis sintáctico SLR
-│   ├── lib.rs           # Módulos públicos de la biblioteca
-│   └── main.rs          # Compilador principal
-├── gramatica.txt        # Definición de la gramática del lenguaje
-└── Cargo.toml           # Configuración del proyecto
-
+│   ├── bin/                    # Ejecutables y programas de prueba
+│   ├── gramatica/              # Parsing y análisis de gramáticas
+│   ├── lexico/                 # Análisis léxico (tokenización)
+│   ├── sintactico/             # Análisis sintáctico SLR
+│   ├── semantico/              # Análisis semántico (NUEVO)
+│   ├── lib.rs                  # Módulos públicos de la biblioteca
+│   └── main.rs                 # Compilador principal
+├── gramatica.txt               # Definición de la gramática del lenguaje
+└── Cargo.toml                  # Configuración del proyecto
 ```
 
 ## 🚀 Instalación
@@ -85,38 +105,64 @@ Si modificas la gramática en `gramatica.txt`, debes regenerar las tablas:
 cargo run --bin generador_slr
 ```
 
-## 📖 Documentación por Módulo
+## 📖 Documentación
 
+### Módulos Principales
+
+- [**src/semantico/**](src/semantico/README.md) - Análisis semántico y sus tablas
 - [**src/gramatica/**](src/gramatica/README.md) - Parseo de gramáticas y cálculo de conjuntos
 - [**src/lexico/**](src/lexico/README.md) - Análisis léxico y tokenización
 - [**src/sintactico/**](src/sintactico/README.md) - Análisis sintáctico SLR
 - [**src/bin/**](src/bin/README.md) - Programas ejecutables y utilidades
 
-## 🔤 Gramática del Lenguaje
+## 🔤 Gramática del Lenguaje Patito
 
-El lenguaje soporta:
+### Tipos de Datos
 
-- **Palabras reservadas**: `programa`, `inicio`, `fin`, `vars`, `entero`, `flotante`, `si`, `sino`, `mientras`, `haz`, `escribe`, `nula`
-- **Operadores**: `+`, `-`, `*`, `/`, `=`, `==`, `!=`, `<`, `>`
-- **Estructuras de control**: Condicionales (`si`/`sino`), ciclos (`mientras`)
-- **Funciones**: Declaración y llamada con argumentos
-- **Variables**: Declaración con tipos (`entero`, `flotante`)
+- `entero`: Números enteros
+- `flotante`: Números de punto flotante
+- `nula`: Tipo void (sin retorno)
+
+### Palabras Reservadas
+
+`programa`, `inicio`, `fin`, `vars`, `entero`, `flotante`, `si`, `sino`, `entonces`, `mientras`, `haz`, `escribe`, `nula`
+
+### Operadores
+
+- **Aritméticos**: `+`, `-`, `*`, `/`
+- **Relacionales**: `>`, `<`, `==`, `!=`
+- **Asignación**: `=`
+
+### Estructuras de Control
+
+- Condicionales: `si`/`entonces`/`sino`
+- Ciclos: `mientras`/`haz`
+- Funciones con parámetros y tipo de retorno
 
 ### Ejemplo de Programa
 
 ```
-programa ejemplo;
+programa mi_programa;
 
 vars x, y : entero;
+vars total : flotante;
+
+entero suma(a : entero, b : entero) {
+    vars resultado : entero;
+    {
+        resultado = a + b;
+    }
+};
 
 inicio {
     x = 5;
-    y = x + 10;
+    y = 10;
+    total = 3.14;
 
-    si (y > 10) entonces {
-        escribe("y es mayor que 10");
+    si (x < y) entonces {
+        escribe("x es menor que y");
     } sino {
-        escribe("y es menor o igual a 10");
+        escribe("x es mayor o igual a y");
     };
 
     mientras (x < 10) haz {
@@ -142,7 +188,19 @@ fin
 3. Valida que la estructura del programa cumple con la gramática
 4. Reporta errores de sintaxis con ubicación precisa
 
-### Fase 3: Generación de Tablas (Offline)
+### Fase 3: Análisis Semántico
+
+1. **Puntos Neurálgicos**: Ejecuta acciones en puntos específicos de la gramática
+2. **Directorio de Funciones**: Crea y mantiene información de funciones
+3. **Tablas de Variables**: Gestiona variables por alcance (local y global)
+4. **Cubo Semántico**: Valida tipos en todas las operaciones
+5. **Validaciones**:
+   - Variable doblemente declarada
+   - Variable no declarada
+   - Función duplicada
+   - Tipos incompatibles
+
+### Fase 4: Generación de Tablas
 
 1. Lee la gramática desde `gramatica.txt`
 2. Calcula conjuntos FIRST y FOLLOW
@@ -150,12 +208,34 @@ fin
 4. Genera tablas ACTION y GOTO
 5. Escribe el archivo `tabla_slr.rs` con las tablas
 
-## 🛠️ Tecnologías Utilizadas
+## Cubo Semántico
+
+### Operadores Aritméticos
+
+- **Regla**: Cualquier operación con `flotante` promueve a `flotante`
+- `entero + entero = entero`
+- `entero + flotante = flotante`
+- `flotante + entero = flotante`
+
+### Operadores Relacionales
+
+- **Regla**: Siempre retornan `entero` (0 = falso, 1 = verdadero)
+- Permiten comparaciones entre cualquier combinación de tipos
+
+### Asignación
+
+- **Regla**: Fuertemente tipado
+- `entero = entero` ✓
+- `flotante = flotante` ✓
+- `flotante = entero` ✓ (promoción)
+- `entero = flotante` ✗ (truncamiento no permitido)
+
+## Tecnologías Utilizadas
 
 - **Rust 2024 Edition**: Lenguaje de programación principal
 - **regex**: Para el análisis léxico con expresiones regulares
 - **lazy_static**: Para inicialización estática de tablas grandes
-- **HashMap/HashSet**: Para estructuras de datos eficientes
+- **HashMap/HashSet**: Para estructuras de datos eficientes (O(1))
 
 ## 📝 Estado del Proyecto
 
@@ -178,12 +258,9 @@ Eduardo Zentella Castillo
 
 Este proyecto es parte del curso de Compiladores en Tecnológico de Monterrey.
 
-## 🤝 Contribuciones
-
-Este es un proyecto académico. Las contribuciones están limitadas a los miembros del equipo.
-
 ## 📚 Referencias
 
 - Compilers: Principles, Techniques, and Tools (Dragon Book)
 - The Rust Programming Language Book
 - Documentación de SLR Parsing
+- Notas del curso de Compiladores
