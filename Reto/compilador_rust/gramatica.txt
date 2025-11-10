@@ -4,7 +4,7 @@
 <FUNCS_LIST> → <FUNCS><FUNCS_LIST>
 <FUNCS_LIST> → ε
 
-<VARS> → vars <VAR_LIST> : <TIPO>;
+<VARS> → vars <VAR_LIST> : <TIPO> ;
 <VAR_LIST> → id <VAR_LIST'>
 <VAR_LIST'> → , id <VAR_LIST'>
 <VAR_LIST'> → ε

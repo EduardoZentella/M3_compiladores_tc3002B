@@ -1,10 +1,10 @@
 # Compilador Patito en Rust
 
-## 📋 Descripción
+## Descripción
 
-Este proyecto implementa un **compilador completo** para el lenguaje de programación **Patito**, desarrollado en Rust. El compilador incluye las fases de análisis léxico, análisis sintáctico SLR(1), **análisis semántico**, y generación automática de tablas de parsing.
+Este proyecto implementa un **compilador completo** para el lenguaje de programación **Patito**, desarrollado en Rust. El compilador incluye las fases de análisis léxico, análisis sintáctico SLR(1), **análisis semántico**, **generación de código intermedio (cuádruplos)**, y generación automática de tablas de parsing.
 
-## 🎯 Características
+## Características
 
 ### Análisis Léxico
 
@@ -32,7 +32,18 @@ Este proyecto implementa un **compilador completo** para el lenguaje de programa
   - Asignaciones con truncamiento (rechazadas)
   - Promoción de tipos (entero → flotante)
 
-## 🏗️ Estructura del Proyecto
+### Generación de Código Intermedio
+
+- **Cuádruplos**: Código intermedio de tres direcciones
+- **Pilas de Operadores y Operandos**: POper, PilaO, PTypes
+- **Gestor de Memoria Temporal**: AVAIL con reutilización de temporales
+- **Algoritmos de Traducción**:
+  - Expresiones aritméticas (+, -, \*, /)
+  - Expresiones relacionales (>, <, ==, !=)
+  - Estatutos lineales (asignación, lectura, escritura)
+- **9 Puntos Neurálgicos** documentados e implementados
+
+## Estructura del Proyecto
 
 ```
 compilador_rust/
@@ -41,14 +52,15 @@ compilador_rust/
 │   ├── gramatica/              # Parsing y análisis de gramáticas
 │   ├── lexico/                 # Análisis léxico (tokenización)
 │   ├── sintactico/             # Análisis sintáctico SLR
-│   ├── semantico/              # Análisis semántico (NUEVO)
+│   ├── semantico/              # Análisis semántico
+│   ├── intermedio/             # Generación de código intermedio
 │   ├── lib.rs                  # Módulos públicos de la biblioteca
 │   └── main.rs                 # Compilador principal
 ├── gramatica.txt               # Definición de la gramática del lenguaje
 └── Cargo.toml                  # Configuración del proyecto
 ```
 
-## 🚀 Instalación
+## Instalación
 
 ### Requisitos Previos
 
@@ -66,7 +78,7 @@ cd compilador_rust
 cargo build --release
 ```
 
-## 💻 Uso
+## Uso
 
 ### Compilar un Archivo
 
@@ -84,7 +96,9 @@ cargo run -- ruta/al/archivo.txt
 # Ejecutar todos los tests
 cargo test
 
-# Test del analizador léxico
+# ═══════════════════════════════════════════════════════════
+# Tests de Análisis Léxico y Sintáctico
+# ═══════════════════════════════════════════════════════════
 cargo run --bin test_lexico
 
 # Test del analizador sintáctico
@@ -95,6 +109,22 @@ cargo run --bin test_first_follow
 
 # Test del autómata LR(0)
 cargo run --bin test_lr0
+
+# ═══════════════════════════════════════════════════════════
+# Tests de Análisis Semántico
+# ═══════════════════════════════════════════════════════════
+cargo run --bin test_cubo_semantico
+cargo run --bin test_tabla_variables
+cargo run --bin test_directorio_funciones
+cargo run --bin test_contexto_semantico
+
+# ═══════════════════════════════════════════════════════════
+# Tests de Generación de Código Intermedio (NUEVO)
+# ═══════════════════════════════════════════════════════════
+cargo run --release --bin test_generador_expresiones      # Expresiones aritméticas
+cargo run --release --bin test_generador_relacionales     # Expresiones relacionales
+cargo run --release --bin test_generador_estatutos        # Estatutos lineales
+cargo run --release --bin test_programa_completo          # Programa completo
 ```
 
 ### Regenerar Tablas SLR
@@ -105,17 +135,18 @@ Si modificas la gramática en `gramatica.txt`, debes regenerar las tablas:
 cargo run --bin generador_slr
 ```
 
-## 📖 Documentación
+## Documentación
 
 ### Módulos Principales
 
+- [**src/intermedio/**](src/intermedio/README.md) - Generación de código intermedio (cuádruplos)
 - [**src/semantico/**](src/semantico/README.md) - Análisis semántico y sus tablas
 - [**src/gramatica/**](src/gramatica/README.md) - Parseo de gramáticas y cálculo de conjuntos
 - [**src/lexico/**](src/lexico/README.md) - Análisis léxico y tokenización
 - [**src/sintactico/**](src/sintactico/README.md) - Análisis sintáctico SLR
 - [**src/bin/**](src/bin/README.md) - Programas ejecutables y utilidades
 
-## 🔤 Gramática del Lenguaje Patito
+## Gramática del Lenguaje Patito
 
 ### Tipos de Datos
 
@@ -172,7 +203,7 @@ inicio {
 fin
 ```
 
-## 🧪 Arquitectura del Compilador
+## Arquitectura del Compilador
 
 ### Fase 1: Análisis Léxico
 
@@ -237,7 +268,7 @@ fin
 - **lazy_static**: Para inicialización estática de tablas grandes
 - **HashMap/HashSet**: Para estructuras de datos eficientes (O(1))
 
-## 📝 Estado del Proyecto
+## Estado del Proyecto
 
 - [x] Análisis léxico completo
 - [x] Parser de gramáticas
@@ -245,20 +276,20 @@ fin
 - [x] Construcción de autómata LR(0)
 - [x] Generación de tablas SLR
 - [x] Análisis sintáctico SLR funcional
-- [ ] Análisis semántico
-- [ ] Generación de código intermedio
+- [x] Análisis semántico
+- [x] Generación de código intermedio
 - [ ] Optimización
 - [ ] Generación de código objeto
 
-## 👥 Autores
+## Autores
 
 Eduardo Zentella Castillo
 
-## 📄 Licencia
+## Licencia
 
 Este proyecto es parte del curso de Compiladores en Tecnológico de Monterrey.
 
-## 📚 Referencias
+## Referencias
 
 - Compilers: Principles, Techniques, and Tools (Dragon Book)
 - The Rust Programming Language Book

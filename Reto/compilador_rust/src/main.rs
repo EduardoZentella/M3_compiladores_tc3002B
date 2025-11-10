@@ -30,9 +30,9 @@
 //! ✓✓✓ Compilación exitosa ✓✓✓
 //! ```
 
-// Declaración de módulos del compilador
-mod lexico;      // Análisis léxico (tokenización)
-mod sintactico;  // Análisis sintáctico (parsing SLR)
+// Usar módulos de la biblioteca
+use compilador_rust::lexico;
+use compilador_rust::sintactico;
 
 /// Obtiene la ruta del archivo a compilar y determina el modo verbose.
 ///
