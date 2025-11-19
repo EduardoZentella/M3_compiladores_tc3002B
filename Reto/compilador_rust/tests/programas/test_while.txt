@@ -1,0 +1,11 @@
+programa test;
+vars i : entero;
+inicio
+{
+    i = 0;
+    mientras ( i < 10 ) haz
+    {
+        i = i + 1;
+    }
+}
+fin

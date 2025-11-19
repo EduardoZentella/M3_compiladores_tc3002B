@@ -1,0 +1,9 @@
+programa test;
+vars a, b : entero;
+inicio
+{
+    a = 5;
+    b = a + 10;
+    escribe ( b ) ;
+}
+fin

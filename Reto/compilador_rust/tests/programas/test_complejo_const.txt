@@ -1,0 +1,20 @@
+programa test;
+vars i, suma : entero;
+inicio
+{
+    suma = 0;
+    i = 1;
+    mientras ( 1 < 10 ) haz
+    {
+        si ( 2 > 1 ) entonces
+        {
+            suma = 10;
+        }
+        sino
+        {
+            suma = 20;
+        } ;
+        i = 2;
+    }
+}
+fin

@@ -8,6 +8,8 @@ pub enum TipoDato {
     Entero,
     /// Tipo de dato flotante (punto flotante)
     Flotante,
+    /// Tipo de dato caracter
+    Char,
 }
 
 impl fmt::Display for TipoDato {
@@ -15,6 +17,7 @@ impl fmt::Display for TipoDato {
         match self {
             TipoDato::Entero => write!(f, "entero"),
             TipoDato::Flotante => write!(f, "flotante"),
+            TipoDato::Char => write!(f, "char"),
         }
     }
 }
@@ -25,6 +28,7 @@ impl TipoDato {
         match s {
             "entero" => Some(TipoDato::Entero),
             "flotante" => Some(TipoDato::Flotante),
+            "char" => Some(TipoDato::Char),
             _ => None,
         }
     }
@@ -66,6 +70,7 @@ mod tests {
     fn test_tipo_dato_from_str() {
         assert_eq!(TipoDato::from_str("entero"), Some(TipoDato::Entero));
         assert_eq!(TipoDato::from_str("flotante"), Some(TipoDato::Flotante));
+        assert_eq!(TipoDato::from_str("char"), Some(TipoDato::Char));
         assert_eq!(TipoDato::from_str("invalido"), None);
     }
 
@@ -87,6 +92,7 @@ mod tests {
     fn test_display() {
         assert_eq!(format!("{}", TipoDato::Entero), "entero");
         assert_eq!(format!("{}", TipoDato::Flotante), "flotante");
+        assert_eq!(format!("{}", TipoDato::Char), "char");
         assert_eq!(format!("{}", TipoRetorno::Nula), "nula");
         assert_eq!(
             format!("{}", TipoRetorno::Tipo(TipoDato::Entero)),

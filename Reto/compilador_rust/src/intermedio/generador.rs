@@ -8,31 +8,41 @@
 //! - **PilaO**: Pila de operandos pendientes
 //! - **PTypes**: Pila de tipos de operandos
 //! - **Quad**: Cola de cuádruplos generados
+//! - **Pjumps**: Pila de saltos pendientes
 
 use crate::intermedio::{Cuadruplo, OperadorCuadruplo, memoria::GestorMemoria};
+use crate::intermedio::memoria_virtual::MemoriaVirtual;
 use crate::semantico::{CuboSemantico, TipoDato, ContextoSemantico};
 use crate::intermedio::cuadruplo::Operando;
 use std::collections::VecDeque;
 
 /// Generador de cuádruplos para código intermedio
 pub struct GeneradorCuadruplos {
-    // Pilas para generación de código
-    /// Pila de operadores pendientes
-    poper: Vec<OperadorCuadruplo>,
+    // ==================== ESTRUCTURAS DE DATOS ====================
+    /// Cuádruplos generados (lista de cuádruplos)
+    quad: VecDeque<Cuadruplo>,
 
-    /// Pila de operandos pendientes
+    /// Pila de operandos (valores, variables, temporales)
     pilao: Vec<Operando>,
 
-    /// Pila de tipos de operandos
+    /// Pila de operadores (+, -, *, /, etc.)
+    poper: Vec<OperadorCuadruplo>,
+
+    /// Pila de tipos de datos (para verificación semántica)
     ptypes: Vec<TipoDato>,
 
-    // Cola de salida
-    /// Cola de cuádruplos generados
-    quad: VecDeque<Cuadruplo>,
+    /// Pila de saltos pendientes (para if/while)
+    pjumps: Vec<usize>,
+
+    /// Contador de expresiones dentro de condiciones (para saber cuándo generar GOTOF)
+    en_condicion: usize,
 
     // Gestión de memoria
     /// Gestor de variables temporales
     gestor_memoria: GestorMemoria,
+
+    /// Sistema de memoria virtual (direcciones 1000-24999)
+    memoria_virtual: MemoriaVirtual,
 
     // Validación semántica
     /// Cubo semántico para validación de tipos
@@ -51,7 +61,10 @@ impl GeneradorCuadruplos {
             pilao: Vec::new(),
             ptypes: Vec::new(),
             quad: VecDeque::new(),
+            pjumps: Vec::new(),
+            en_condicion: 0,
             gestor_memoria: GestorMemoria::new(),
+            memoria_virtual: MemoriaVirtual::new(),
             cubo_semantico: CuboSemantico::new(),
             contexto: None,
         }
@@ -254,6 +267,9 @@ impl GeneradorCuadruplos {
     /// PN9: Generar cuádruplo para operador relacional
     /// If POper.top() == rel.op then ...
     pub fn generar_relacional(&mut self) -> Result<(), String> {
+        eprintln!("[GENERADOR] generar_relacional: poper.last() = {:?}, en_condicion = {}",
+                  self.poper.last(), self.en_condicion);
+
         if let Some(&op) = self.poper.last() {
             if matches!(op,
                 OperadorCuadruplo::MayorQue |
@@ -262,6 +278,13 @@ impl GeneradorCuadruplos {
                 OperadorCuadruplo::Diferente
             ) {
                 self.generar_cuadruplo_aritmetico()?;
+
+                // Si estamos en una condición, generar GOTOF automáticamente
+                if self.esta_en_condicion() {
+                    eprintln!("[GENERADOR] Generando GOTOF automático después de expresión relacional");
+                    self.generar_gotof()?;
+                    self.finalizar_condicion(); // Ya procesamos la expresión
+                }
             }
         }
         Ok(())
@@ -352,6 +375,228 @@ impl GeneradorCuadruplos {
         Ok(())
     }
 
+    // ==================== ESTRUCTURAS DE CONTROL ====================
+
+    /// Marcar que estamos entrando en una expresión condicional (si, mientras)
+    pub fn iniciar_condicion(&mut self) {
+        self.en_condicion += 1;
+        eprintln!("[GENERADOR] Iniciando condición (nivel {})", self.en_condicion);
+    }
+
+    /// Marcar que salimos de una expresión condicional
+    pub fn finalizar_condicion(&mut self) {
+        if self.en_condicion > 0 {
+            self.en_condicion -= 1;
+        }
+        eprintln!("[GENERADOR] Finalizando condición (nivel {})", self.en_condicion);
+    }
+
+    /// Verificar si estamos dentro de una expresión condicional
+    pub fn esta_en_condicion(&self) -> bool {
+        self.en_condicion > 0
+    }
+
+    /// Paso 13-19: Generar GOTOF para condicionales y ciclos
+    /// Verifica que el resultado de la expresión sea booleano y genera salto condicional
+    pub fn generar_gotof(&mut self) -> Result<(), String> {
+        // Obtener el resultado de la expresión (debe estar en la pila)
+        let tipo_expr = self.ptypes.last()
+            .ok_or("Error: No hay expresión para evaluar en condicional")?;
+
+        // Validar que sea tipo entero (se usa como booleano: 0=false, !=0=true)
+        if *tipo_expr != TipoDato::Entero {
+            return Err(format!(
+                "Error: La expresión condicional debe ser de tipo entero (booleano), se encontró {:?}",
+                tipo_expr
+            ));
+        }
+
+        let operando_cond = self.pilao.pop()
+            .ok_or("Error: No hay operando condicional")?;
+        self.ptypes.pop();
+
+        // Generar cuádruplo GOTOF con salto pendiente
+        let cuadruplo = Cuadruplo::new(
+            OperadorCuadruplo::GotoF,
+            operando_cond.clone(),
+            Operando::Vacio,
+            Operando::Pendiente, // Se llenará después con FILL
+        );
+
+        self.quad.push_back(cuadruplo);
+
+        // Guardar la posición del cuádruplo para FILL posterior
+        let pos_salto = self.quad.len() - 1;
+        self.pjumps.push(pos_salto);
+
+        // Liberar temporal si fue usado
+        self.liberar_si_temporal(&operando_cond);
+
+        Ok(())
+    }
+
+    /// Paso 14: Rellenar salto de condicional (FILL)
+    pub fn fill_salto_condicional(&mut self) -> Result<(), String> {
+        let pos_salto = self.pjumps.pop()
+            .ok_or("Error: No hay salto pendiente para rellenar")?;
+
+        // La dirección de salto es la posición actual (siguiente cuádruplo)
+        let direccion_salto = self.quad.len();
+
+        // Actualizar el cuádruplo con la dirección correcta
+        if let Some(cuadruplo) = self.quad.get_mut(pos_salto) {
+            cuadruplo.resultado = Operando::Etiqueta(direccion_salto);
+        } else {
+            return Err(format!("Error: Posición de salto {} inválida", pos_salto));
+        }
+
+        Ok(())
+    }
+
+    /// Paso 16: Generar else (FILL del GOTOF y generar GOTO)
+    /// Iniciar else: genera GOTO al final del then (antes de procesar el cuerpo del else)
+    pub fn iniciar_else(&mut self) -> Result<(), String> {
+        eprintln!("[INTERMEDIO] Iniciando else - generando GOTO");
+
+        // Generar GOTO incondicional (saltará al final del else)
+        let cuadruplo_goto = Cuadruplo::new(
+            OperadorCuadruplo::Goto,
+            Operando::Vacio,
+            Operando::Vacio,
+            Operando::Pendiente,
+        );
+
+        self.quad.push_back(cuadruplo_goto);
+
+        // Guardar posición del GOTO para FILL posterior
+        let pos_goto = self.quad.len() - 1;
+        self.pjumps.push(pos_goto);
+
+        // La siguiente posición será el inicio del else
+        let inicio_else = self.quad.len();
+        self.pjumps.push(inicio_else);
+
+        Ok(())
+    }
+
+    pub fn generar_else(&mut self) -> Result<(), String> {
+        // En pjumps tenemos: [GOTOF, GOTO, INICIO_ELSE]
+        // Necesitamos extraer estos tres valores
+
+        let inicio_else = self.pjumps.pop()
+            .ok_or("Error: No hay inicio_else pendiente")?;
+
+        let pos_goto = self.pjumps.pop()
+            .ok_or("Error: No hay GOTO pendiente para else")?;
+
+        let pos_gotof = self.pjumps.pop()
+            .ok_or("Error: No hay GOTOF pendiente para else")?;
+
+        // Rellenar el GOTOF para que apunte al inicio del else
+        if let Some(cuadruplo) = self.quad.get_mut(pos_gotof) {
+            cuadruplo.resultado = Operando::Etiqueta(inicio_else);
+            eprintln!("[INTERMEDIO] FILL GOTOF: posición {} apunta a {}", pos_gotof, inicio_else);
+        }
+
+        // Rellenar el GOTO para que apunte después del else (posición actual)
+        let fin_else = self.quad.len();
+        if let Some(cuadruplo) = self.quad.get_mut(pos_goto) {
+            cuadruplo.resultado = Operando::Etiqueta(fin_else);
+            eprintln!("[INTERMEDIO] FILL GOTO: posición {} apunta a {}", pos_goto, fin_else);
+        }
+
+        Ok(())
+    }    /// Paso 18: Marcar inicio de ciclo
+    pub fn marcar_inicio_ciclo(&mut self) {
+        // Guardar la posición actual (inicio del ciclo)
+        let pos_inicio = self.quad.len();
+        self.pjumps.push(pos_inicio);
+    }
+
+    /// Paso 20: Generar fin de ciclo (GOTO inicio y FILL GOTOF)
+    pub fn generar_fin_ciclo(&mut self) -> Result<(), String> {
+        // Obtener posición del GOTOF (salida del ciclo)
+        let pos_gotof = self.pjumps.pop()
+            .ok_or("Error: No hay GOTOF de ciclo para rellenar")?;
+
+        // Obtener posición de inicio del ciclo
+        let pos_inicio = self.pjumps.pop()
+            .ok_or("Error: No hay marca de inicio de ciclo")?;
+
+        // Generar GOTO para regresar al inicio
+        let cuadruplo_goto = Cuadruplo::new(
+            OperadorCuadruplo::Goto,
+            Operando::Vacio,
+            Operando::Vacio,
+            Operando::Etiqueta(pos_inicio),
+        );
+
+        self.quad.push_back(cuadruplo_goto);
+
+        // Rellenar el GOTOF para que salte al final del ciclo
+        let direccion_fin = self.quad.len();
+        if let Some(cuadruplo) = self.quad.get_mut(pos_gotof) {
+            cuadruplo.resultado = Operando::Etiqueta(direccion_fin);
+        }
+
+        Ok(())
+    }
+
+    // ==================== LLAMADAS A FUNCIONES ====================
+
+    /// Paso 2: Generar ERA (Activation Record)
+    pub fn generar_era(&mut self) -> Result<(), String> {
+        // Por ahora, simplemente generar el cuádruplo ERA
+        // En una implementación completa, se calcularía el tamaño del registro de activación
+        let cuadruplo = Cuadruplo::new(
+            OperadorCuadruplo::Era,
+            Operando::Vacio,
+            Operando::Vacio,
+            Operando::Vacio,
+        );
+
+        self.quad.push_back(cuadruplo);
+        Ok(())
+    }
+
+    /// Paso 3-4: Generar PARAMETER
+    pub fn generar_parameter(&mut self) -> Result<(), String> {
+        let operando = self.pilao.pop()
+            .ok_or("Error: No hay parámetro para pasar")?;
+        self.ptypes.pop();
+
+        let cuadruplo = Cuadruplo::new(
+            OperadorCuadruplo::Parametro,
+            operando.clone(),
+            Operando::Vacio,
+            Operando::Vacio,
+        );
+
+        self.quad.push_back(cuadruplo);
+        self.liberar_si_temporal(&operando);
+
+        Ok(())
+    }
+
+    /// Paso 5: Verificar número de parámetros (stub por ahora)
+    pub fn verificar_parametros(&mut self) -> Result<(), String> {
+        // TODO: Implementar verificación real de número y tipos de parámetros
+        Ok(())
+    }
+
+    /// Paso 6: Generar GOSUB
+    pub fn generar_gosub(&mut self) -> Result<(), String> {
+        let cuadruplo = Cuadruplo::new(
+            OperadorCuadruplo::GoSub,
+            Operando::Vacio,
+            Operando::Vacio,
+            Operando::Vacio,
+        );
+
+        self.quad.push_back(cuadruplo);
+        Ok(())
+    }
+
     // ==================== UTILIDADES ====================
 
     /// Libera un temporal si el operando es temporal
@@ -413,6 +658,7 @@ impl GeneradorCuadruplos {
         self.pilao.clear();
         self.ptypes.clear();
         self.quad.clear();
+        self.pjumps.clear();
         self.gestor_memoria.reiniciar();
     }
 

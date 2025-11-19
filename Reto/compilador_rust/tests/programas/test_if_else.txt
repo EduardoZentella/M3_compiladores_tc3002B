@@ -1,0 +1,15 @@
+programa test;
+vars a : entero;
+inicio
+{
+    a = 10;
+    si ( a > 5 ) entonces
+    {
+        a = 100;
+    }
+    sino
+    {
+        a = 200;
+    } ;
+}
+fin

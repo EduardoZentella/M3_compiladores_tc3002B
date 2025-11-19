@@ -1,0 +1,20 @@
+programa test_control;
+
+vars a, b, c : entero;
+
+inicio
+{
+    a = 5;
+    b = 10;
+
+    si (a < b) entonces {
+        c = a + b;
+    } sino {
+        c = a - b;
+    };
+
+    mientras (a < 10) haz {
+        a = a + 1;
+    }
+}
+fin

@@ -47,6 +47,8 @@ pub enum TipoToken {
     Haz,
     /// Palabra reservada: `si` - Condicional if
     Si,
+    /// Palabra reservada: `entonces` - Parte del condicional if
+    Entonces,
     /// Palabra reservada: `sino` - Condicional else
     Sino,
     /// Palabra reservada: `nula` - Tipo void (sin retorno)
@@ -157,6 +159,7 @@ impl TipoToken {
             TipoToken::Mientras => "mientras",
             TipoToken::Haz => "haz",
             TipoToken::Si => "si",
+            TipoToken::Entonces => "entonces",
             TipoToken::Sino => "sino",
             TipoToken::Nula => "nula",
 

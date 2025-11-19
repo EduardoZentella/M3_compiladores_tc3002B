@@ -287,6 +287,8 @@ generador.generar_escritura()?;
 
 ## Tests Disponibles
 
+### Tests Unitarios
+
 Ejecuta los siguientes tests para verificar la generación de cuádruplos:
 
 ```bash
@@ -301,6 +303,22 @@ cargo run --release --bin test_generador_estatutos
 
 # Test de programa completo
 cargo run --release --bin test_programa_completo
+
+# Tests de memoria virtual
+cargo test --lib memoria
+```
+
+### Programas de Prueba
+
+Los programas de prueba en lenguaje Patito están en `tests/programas/`.
+Ver [tests/programas/README.md](../../tests/programas/README.md) para lista completa y detalles.
+
+```bash
+# Tests de control de flujo
+cargo run --bin compilador_rust tests/programas/test_if_const.txt
+cargo run --bin compilador_rust tests/programas/test_if_else_const.txt
+cargo run --bin compilador_rust tests/programas/test_while_const.txt
+cargo run --bin compilador_rust tests/programas/test_complejo_const.txt
 ```
 
 ---

@@ -27,10 +27,15 @@ pub enum OperadorCuadruplo {
     Lectura,        // lee
     Escritura,      // escribe
 
-    // Control de flujo (para futuras entregas)
+    // Control de flujo
     Goto,           // goto
     GotoF,          // goto falso (condicional)
     GotoV,          // goto verdadero (condicional)
+
+    // Funciones
+    Era,            // Activation Record
+    Parametro,      // Paso de parámetro
+    GoSub,          // Llamada a subrutina
 }
 
 impl OperadorCuadruplo {
@@ -51,6 +56,9 @@ impl OperadorCuadruplo {
             "goto" => Some(OperadorCuadruplo::Goto),
             "gotof" => Some(OperadorCuadruplo::GotoF),
             "gotov" => Some(OperadorCuadruplo::GotoV),
+            "era" => Some(OperadorCuadruplo::Era),
+            "param" => Some(OperadorCuadruplo::Parametro),
+            "gosub" => Some(OperadorCuadruplo::GoSub),
             _ => None,
         }
     }
@@ -90,6 +98,9 @@ impl fmt::Display for OperadorCuadruplo {
             OperadorCuadruplo::Goto => "goto",
             OperadorCuadruplo::GotoF => "gotof",
             OperadorCuadruplo::GotoV => "gotov",
+            OperadorCuadruplo::Era => "era",
+            OperadorCuadruplo::Parametro => "param",
+            OperadorCuadruplo::GoSub => "gosub",
         };
         write!(f, "{}", s)
     }
@@ -98,7 +109,9 @@ impl fmt::Display for OperadorCuadruplo {
 /// Representa un operando en un cuádruplo
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operando {
-    /// Variable o identificador
+    /// Dirección virtual de memoria
+    Direccion(usize),
+    /// Variable o identificador (para depuración/compatibilidad)
     Variable(String),
     /// Constante entera
     ConstanteEntera(i32),
@@ -108,16 +121,23 @@ pub enum Operando {
     Temporal(usize),
     /// Vacío (para operaciones unarias o sin operando)
     Vacio,
+    /// Etiqueta de salto (dirección de cuádruplo)
+    Etiqueta(usize),
+    /// Pendiente (para saltos que se llenarán después)
+    Pendiente,
 }
 
 impl fmt::Display for Operando {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Operando::Direccion(dir) => write!(f, "@{}", dir),
             Operando::Variable(nombre) => write!(f, "{}", nombre),
             Operando::ConstanteEntera(valor) => write!(f, "{}", valor),
             Operando::ConstanteFlotante(valor) => write!(f, "{}", valor),
             Operando::Temporal(num) => write!(f, "t{}", num),
             Operando::Vacio => write!(f, "-"),
+            Operando::Etiqueta(dir) => write!(f, "L{}", dir),
+            Operando::Pendiente => write!(f, "?"),
         }
     }
 }

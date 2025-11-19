@@ -31,8 +31,9 @@ lazy_static! {
         ReglaToken { tipo: TipoToken::Escribe, patron: Regex::new(r"^\bescribe\b").unwrap() },
         ReglaToken { tipo: TipoToken::Mientras, patron: Regex::new(r"^\bmientras\b").unwrap() },
         ReglaToken { tipo: TipoToken::Haz, patron: Regex::new(r"^\bhaz\b").unwrap() },
-        ReglaToken { tipo: TipoToken::Si, patron: Regex::new(r"^\bsi\b").unwrap() },
-        ReglaToken { tipo: TipoToken::Sino, patron: Regex::new(r"^\bsino\b").unwrap() },
+        ReglaToken { tipo: TipoToken::Si, patron: Regex::new(r"^si\b").unwrap() },
+        ReglaToken { tipo: TipoToken::Entonces, patron: Regex::new(r"^entonces\b").unwrap() },
+        ReglaToken { tipo: TipoToken::Sino, patron: Regex::new(r"^sino\b").unwrap() },
         ReglaToken { tipo: TipoToken::Nula, patron: Regex::new(r"^\bnula\b").unwrap() },
 
         // Constantes (deben ir antes de identificadores)

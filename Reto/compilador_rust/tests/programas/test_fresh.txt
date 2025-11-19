@@ -1,0 +1,8 @@
+programa test;
+vars x : entero;
+inicio
+{
+    x = 10;
+    escribe(x);
+}
+fin

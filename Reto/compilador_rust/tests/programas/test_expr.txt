@@ -1,0 +1,11 @@
+programa test_if_simple;
+
+vars a, b, c : entero;
+
+inicio
+{
+    a = 5;
+    b = 10;
+    c = a + b;
+}
+fin

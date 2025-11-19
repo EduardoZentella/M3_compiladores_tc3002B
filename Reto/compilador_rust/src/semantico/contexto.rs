@@ -145,6 +145,16 @@ impl ContextoSemantico {
                 nombre
             ))
     }
+
+    /// Verifica que una función exista en el directorio
+    pub fn verificar_funcion_existe(&self, nombre: &str) -> Result<(), String> {
+        if self.dir_funciones.buscar_funcion(nombre).is_some() {
+            Ok(())
+        } else {
+            Err(format!("Error semántico: Función '{}' no declarada", nombre))
+        }
+    }
+
     // UTILIDADES
     /// Imprime el estado completo del contexto semántico
     pub fn imprimir(&self) {

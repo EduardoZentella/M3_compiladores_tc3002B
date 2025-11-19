@@ -1,12 +1,13 @@
 //! # Módulo de Generación de Código Intermedio
-//! 
-//! Este módulo implementa la generación de cuádruplos (código intermedio)
-//! para el compilador de Patito.
+//!
+//! Este módulo contiene las estructuras y algoritmos para generar código intermedio (cuádruplos).
 
-mod cuadruplo;
-mod memoria;
-mod generador;
+pub mod cuadruplo;
+pub mod generador;
+pub mod memoria;
+pub mod memoria_virtual;
 
-pub use cuadruplo::{Cuadruplo, OperadorCuadruplo};
-pub use memoria::GestorMemoria;
+pub use cuadruplo::{Cuadruplo, OperadorCuadruplo, Operando};
 pub use generador::GeneradorCuadruplos;
+pub use memoria::GestorMemoria;
+pub use memoria_virtual::{MemoriaVirtual, TipoSegmento};

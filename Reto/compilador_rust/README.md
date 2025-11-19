@@ -37,11 +37,17 @@ Este proyecto implementa un **compilador completo** para el lenguaje de programa
 - **Cuádruplos**: Código intermedio de tres direcciones
 - **Pilas de Operadores y Operandos**: POper, PilaO, PTypes
 - **Gestor de Memoria Temporal**: AVAIL con reutilización de temporales
+- **Memoria Virtual**: Sistema de direcciones virtuales (1000-24999)
+- **Estructuras de Control**:
+  - Condicionales (IF/ELSE) con saltos GOTOF y GOTO
+  - Ciclos (WHILE) con saltos hacia atrás
+  - Anidamiento de estructuras de control
 - **Algoritmos de Traducción**:
   - Expresiones aritméticas (+, -, \*, /)
   - Expresiones relacionales (>, <, ==, !=)
   - Estatutos lineales (asignación, lectura, escritura)
-- **9 Puntos Neurálgicos** documentados e implementados
+  - Control de flujo (condiciones y ciclos)
+- **Puntos Neurálgicos**: 20+ puntos documentados e implementados
 
 ## Estructura del Proyecto
 
@@ -56,6 +62,8 @@ compilador_rust/
 │   ├── intermedio/             # Generación de código intermedio
 │   ├── lib.rs                  # Módulos públicos de la biblioteca
 │   └── main.rs                 # Compilador principal
+├── tests/
+│   └── programas/              # Programas de prueba en Patito
 ├── gramatica.txt               # Definición de la gramática del lenguaje
 └── Cargo.toml                  # Configuración del proyecto
 ```
@@ -119,12 +127,26 @@ cargo run --bin test_directorio_funciones
 cargo run --bin test_contexto_semantico
 
 # ═══════════════════════════════════════════════════════════
-# Tests de Generación de Código Intermedio (NUEVO)
+# Tests de Generación de Código Intermedio
 # ═══════════════════════════════════════════════════════════
 cargo run --release --bin test_generador_expresiones      # Expresiones aritméticas
 cargo run --release --bin test_generador_relacionales     # Expresiones relacionales
 cargo run --release --bin test_generador_estatutos        # Estatutos lineales
 cargo run --release --bin test_programa_completo          # Programa completo
+
+# Tests de memoria virtual
+cargo test --lib memoria                                  # Tests unitarios de memoria virtual
+
+# ═══════════════════════════════════════════════════════════
+# Tests de Control de Flujo (programas de prueba)
+# ═══════════════════════════════════════════════════════════
+# Los programas de test están en tests/programas/
+# Ver tests/programas/README.md para lista completa
+
+cargo run --bin compilador_rust tests/programas/test_if_const.txt         # IF simple
+cargo run --bin compilador_rust tests/programas/test_if_else_const.txt    # IF-ELSE
+cargo run --bin compilador_rust tests/programas/test_while_const.txt      # WHILE
+cargo run --bin compilador_rust tests/programas/test_complejo_const.txt   # Estructuras anidadas
 ```
 
 ### Regenerar Tablas SLR
@@ -145,6 +167,10 @@ cargo run --bin generador_slr
 - [**src/lexico/**](src/lexico/README.md) - Análisis léxico y tokenización
 - [**src/sintactico/**](src/sintactico/README.md) - Análisis sintáctico SLR
 - [**src/bin/**](src/bin/README.md) - Programas ejecutables y utilidades
+
+### Programas de Prueba
+
+- [**tests/programas/**](tests/programas/README.md) - Programas de ejemplo y tests en Patito
 
 ## Gramática del Lenguaje Patito
 
@@ -278,6 +304,11 @@ fin
 - [x] Análisis sintáctico SLR funcional
 - [x] Análisis semántico
 - [x] Generación de código intermedio
+- [x] Memoria virtual (direcciones 1000-24999)
+- [x] Estructuras de control (IF/ELSE, WHILE)
+- [x] Anidamiento de estructuras de control
+- [ ] Resolver problema de variables en condiciones (requiere regenerar tabla SLR)
+- [ ] Funciones y llamadas
 - [ ] Optimización
 - [ ] Generación de código objeto
 
