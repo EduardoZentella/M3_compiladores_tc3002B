@@ -17,7 +17,7 @@ fn main() {
         Token { tipo: TipoToken::Fin, valor: "fin".to_string(), linea: 3 },
     ];
 
-    match sintactico::analyze(&tokens1, &true) {
+    match sintactico::analyze(&tokens1, 1) {
         Ok(_) => println!("\n✓ Test 1 PASADO\n"),
         Err(e) => eprintln!("\n✗ Test 1 FALLIDO: {}\n", e),
     }
@@ -38,7 +38,7 @@ fn main() {
         Token { tipo: TipoToken::Fin, valor: "fin".to_string(), linea: 4 },
     ];
 
-    match sintactico::analyze(&tokens2, &true) {
+    match sintactico::analyze(&tokens2, 1) {
         Ok(_) => println!("✓ Test 2 PASADO\n"),
         Err(e) => eprintln!("✗ Test 2 FALLIDO: {}\n", e),
     }

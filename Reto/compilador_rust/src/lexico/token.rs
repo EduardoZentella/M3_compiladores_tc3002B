@@ -39,6 +39,8 @@ pub enum TipoToken {
     Entero,
     /// Palabra reservada: `flotante` - Tipo de dato de punto flotante
     Flotante,
+    /// Palabra reservada: `letrero` - Tipo de dato string
+    LetreroTipo,
     /// Palabra reservada: `escribe` - Función de salida (print)
     Escribe,
     /// Palabra reservada: `mientras` - Inicio de ciclo while
@@ -53,6 +55,8 @@ pub enum TipoToken {
     Sino,
     /// Palabra reservada: `nula` - Tipo void (sin retorno)
     Nula,
+    /// Palabra reservada: `regresa` - Return statement
+    Regresa,
 
     // ═══════════════════════════════════════════════════════════
     // IDENTIFICADORES Y CONSTANTES
@@ -155,6 +159,7 @@ impl TipoToken {
             TipoToken::Vars => "vars",
             TipoToken::Entero => "entero",
             TipoToken::Flotante => "flotante",
+            TipoToken::LetreroTipo => "letrero",
             TipoToken::Escribe => "escribe",
             TipoToken::Mientras => "mientras",
             TipoToken::Haz => "haz",
@@ -162,6 +167,7 @@ impl TipoToken {
             TipoToken::Entonces => "entonces",
             TipoToken::Sino => "sino",
             TipoToken::Nula => "nula",
+            TipoToken::Regresa => "regresa",
 
             // Identificadores y Constantes
             TipoToken::Id => "id",

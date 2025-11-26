@@ -1,0 +1,44 @@
+programa test_completo;
+
+vars global_x, global_y : entero;
+
+entero sumar_rango(inicio : entero, fin : entero) {
+    vars suma, i : entero;
+    {
+        suma = 0;
+        i = inicio;
+
+        mientras (i < fin) haz {
+            suma = suma + i;
+            i = i + 1;
+        }
+    }
+};
+
+inicio {
+    vars local_a, local_b, resultado : entero;
+    {
+        global_x = 10;
+        global_y = 20;
+        local_a = 5;
+        local_b = 15;
+
+        escribe("Variables globales:");
+        escribe(global_x);
+        escribe(global_y);
+
+        escribe("Variables locales:");
+        escribe(local_a);
+        escribe(local_b);
+
+        si (global_x < global_y) entonces {
+            escribe("X menor que Y");
+            resultado = sumar_rango(local_a, local_b);
+            escribe("Suma rango:");
+            escribe(resultado);
+        } sino {
+            escribe("X mayor o igual a Y");
+        };
+    }
+}
+fin

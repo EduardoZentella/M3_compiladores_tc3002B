@@ -91,12 +91,25 @@ cargo build --release
 ### Compilar un Archivo
 
 ```bash
-# Compilar un archivo con salida verbose
+# Compilar sin debug (solo output del programa)
+cargo run -- ruta/al/archivo.txt
+
+# Compilar con verbose nivel 1 (-v): Fases principales del compilador
 cargo run -- ruta/al/archivo.txt -v
 
-# Compilar sin detalles
-cargo run -- ruta/al/archivo.txt
+# Compilar con verbose nivel 2 (-vv): + Acciones semánticas y estados del parser
+cargo run -- ruta/al/archivo.txt -vv
+
+# Compilar con verbose nivel 3 (-vvv): + Debug completo (tokens, reduces, atributos)
+cargo run -- ruta/al/archivo.txt -vvv
 ```
+
+### Niveles de Verbose
+
+- **Nivel 0** (sin flag): Solo muestra el output del programa y cuádruplos generados
+- **Nivel 1** (`-v`): Muestra las fases principales del compilador (léxico, sintáctico, VM)
+- **Nivel 2** (`-vv`): Añade estados del parser y acciones semánticas importantes
+- **Nivel 3** (`-vvv`): Debug completo con cada token, reduce, atributos y detalles de cuádruplos
 
 ### Ejecutar Tests
 

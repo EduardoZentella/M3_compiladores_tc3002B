@@ -1,0 +1,31 @@
+programa test_fibonacci;
+
+vars pos, resultado : entero;
+
+entero fibonacci(n : entero) {
+    vars a, b, temp, i : entero;
+
+    a = 0;
+    b = 1;
+    i = 0;
+
+    mientras (i < n) haz {
+        temp = a;
+        a = b;
+        b = temp + b;
+        i = i + 1;
+    }
+
+    regresa b;
+};
+
+inicio {
+    pos = 7;
+    escribe("Fibonacci posicion:");
+    escribe(pos);
+
+    resultado = fibonacci(pos);
+    escribe("Resultado:");
+    escribe(resultado);
+}
+fin

@@ -33,23 +33,25 @@
 // Usar módulos de la biblioteca
 use compilador_rust::lexico;
 use compilador_rust::sintactico;
+use compilador_rust::intermedio::GeneradorCuadruplos;
+use compilador_rust::vm::{MaquinaVirtual, ConsolaIO};
 
-/// Obtiene la ruta del archivo a compilar y determina el modo verbose.
+/// Obtiene la ruta del archivo a compilar y determina el nivel de verbose.
 ///
 /// # Comportamiento
 /// - Si hay argumentos en la línea de comandos, los usa
 /// - Si no, solicita interactivamente la ruta al usuario
-/// - Detecta flags `-v` o `--verbose` para salida detallada
+/// - Detecta flags `-v`, `-vv`, `-vvv` para niveles de verbose (1, 2, 3)
 /// - Convierte rutas relativas a absolutas usando `canonicalize`
 ///
 /// # Retorna
-/// Una tupla `(ruta_absoluta, es_verbose)`:
+/// Una tupla `(ruta_absoluta, nivel_verbose)`:
 /// - `ruta_absoluta`: Path completo del archivo a compilar
-/// - `es_verbose`: `true` si se debe mostrar salida detallada
+/// - `nivel_verbose`: 0 (sin debug), 1 (-v), 2 (-vv), 3 (-vvv)
 ///
 /// # Panics
 /// Termina el programa (exit 1) si no se puede resolver la ruta del archivo
-fn obtain_file_path() -> (String, bool) {
+fn obtain_file_path() -> (String, usize) {
     // Se obtiene el path del archivo por argumentos o se solicita al usuario
     let mut path = String::new();
     let args: Vec<String> = std::env::args().collect();
@@ -59,13 +61,23 @@ fn obtain_file_path() -> (String, bool) {
         // Concatenar todos los argumentos (excepto el nombre del programa)
         path = args[1..].join(" ");
     } else {
-        println!("Ingrese el path del archivo a analizar (agregue -v o --verbose para modo detallado):");
+        println!("Ingrese el path del archivo a analizar (agregue -v/-vv/-vvv para debug):");
         std::io::stdin().read_line(&mut path).expect("Error al leer la entrada");
     }
 
-    // Se verifica que el path tenga -v o --verbose y se limpia
-    let is_verbose = path.contains("-v") || path.contains("--verbose");
-    path = path.replace("-v", "").replace("--verbose", "").trim().to_string();
+    // Determinar nivel de verbose
+    let nivel_verbose = if path.contains("-vvv") {
+        3
+    } else if path.contains("-vv") {
+        2
+    } else if path.contains("-v") {
+        1
+    } else {
+        0
+    };
+
+    // Limpiar flags de verbose del path
+    path = path.replace("-vvv", "").replace("-vv", "").replace("-v", "").trim().to_string();
 
     // Se transforma el path a un full path
     let full_path = match std::fs::canonicalize(&path) {
@@ -76,22 +88,29 @@ fn obtain_file_path() -> (String, bool) {
         }
     };
 
-    (full_path, is_verbose)
+    (full_path, nivel_verbose)
 }
 
-/// Imprime un mensaje solo si el modo verbose está activado.
+/// Imprime un mensaje según el nivel de verbose configurado.
 ///
 /// # Parámetros
 /// - `message`: El mensaje a imprimir
-/// - `is_verbose`: Si es `true`, imprime el mensaje; si no, no hace nada
+/// - `nivel_requerido`: Nivel mínimo necesario para mostrar este mensaje (1-3)
+/// - `nivel_actual`: Nivel de verbose actual (0-3)
+///
+/// # Niveles de Verbose
+/// - Nivel 0: Solo output final (sin debug)
+/// - Nivel 1 (-v): Fases principales del compilador
+/// - Nivel 2 (-vv): + Acciones semánticas importantes
+/// - Nivel 3 (-vvv): + Debug completo (reduce, atributos, tokens)
 ///
 /// # Ejemplo
 /// ```
-/// verbose_log("Procesando tokens...", &true);  // Imprime
-/// verbose_log("Procesando tokens...", &false); // No imprime nada
+/// verbose_log("Iniciando parser...", 1, 2);  // Imprime (nivel_actual >= 1)
+/// verbose_log("Token: Id('x')", 3, 1);       // NO imprime (nivel_actual < 3)
 /// ```
-fn verbose_log(message: &str, is_verbose: &bool) {
-    if *is_verbose {
+fn verbose_log(message: &str, nivel_requerido: usize, nivel_actual: usize) {
+    if nivel_actual >= nivel_requerido {
         println!("{}", message);
     }
 }
@@ -119,8 +138,8 @@ fn verbose_log(message: &str, is_verbose: &bool) {
 /// cargo run -- ejemplos/test.txt -v
 /// ```
 fn main() {
-    // PASO 1: Obtener configuración (ruta y modo verbose)
-    let (full_path, is_verbose) = obtain_file_path();
+    // PASO 1: Obtener configuración (ruta y nivel de verbose)
+    let (full_path, nivel_verbose) = obtain_file_path();
 
     // PASO 2: Leer archivo fuente
     // El compilador trabaja sobre el contenido completo en memoria
@@ -132,15 +151,15 @@ fn main() {
         }
     };
 
-    verbose_log(&format!("Analizando archivo: {}", full_path), &is_verbose);
-    verbose_log("\n=== Iniciando análisis léxico ===\n", &is_verbose);
+    verbose_log(&format!("Analizando archivo: {}", full_path), 1, nivel_verbose);
+    verbose_log("\n=== Iniciando análisis léxico ===\n", 1, nivel_verbose);
 
     // PASO 3: ANÁLISIS LÉXICO
     // Convierte el código fuente (String) en una secuencia de tokens
     // Cada token representa un elemento léxico: palabra reservada, identificador, operador, etc.
-    let tokens = match lexico::analyze(&contenido, &is_verbose) {
+    let tokens = match lexico::analyze(&contenido, nivel_verbose) {
         Ok(toks) => {
-            verbose_log(&format!("\n✓ Análisis léxico completado. Tokens generados: {}\n", toks.len()), &is_verbose);
+            verbose_log(&format!("\n✓ Análisis léxico completado. Tokens generados: {}\n", toks.len()), 1, nivel_verbose);
             toks
         },
         Err(e) => {
@@ -149,26 +168,68 @@ fn main() {
         }
     };
 
-    verbose_log("=== Iniciando análisis sintáctico ===\n", &is_verbose);
+    verbose_log("=== Iniciando análisis sintáctico ===\n", 1, nivel_verbose);
 
     // PASO 4: ANÁLISIS SINTÁCTICO
     // Valida que la secuencia de tokens cumple con la gramática del lenguaje
     // Usa un parser SLR(1) basado en tablas ACTION y GOTO
-    match sintactico::analyze(&tokens, &is_verbose) {
-        Ok(_) => {
-            // ✓ El programa es sintácticamente correcto
-            println!("\n✓✓✓ Compilación exitosa ✓✓✓");
+    // Retorna el generador de cuádruplos para la siguiente fase
+    let generador = match sintactico::analyze(&tokens, nivel_verbose) {
+        Ok(generador_cuadruplos) => {
+            // El programa es sintácticamente correcto
+            verbose_log("\n✓ Análisis sintáctico completado\n", 1, nivel_verbose);
+            generador_cuadruplos
         },
         Err(e) => {
-            // ✗ Hay un error de sintaxis
+            // Hay un error de sintaxis
             eprintln!("\n✗✗✗ Error en el análisis sintáctico ✗✗✗");
             eprintln!("{}", e);
             return;
         }
     };
 
-    // TODO: Próximas fases
-    // - Análisis semántico (tabla de símbolos, tipos)
-    // - Generación de código intermedio
-    // - Generación de código para la máquina virtual
+    // PASO 5: GENERACIÓN DE CÓDIGO INTERMEDIO Y EJECUCIÓN
+    verbose_log("=== Preparando ejecución ===\n", 1, nivel_verbose);
+
+    // Extraer nombre del programa desde la ruta del archivo
+    let nombre_programa = std::path::Path::new(&full_path)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("programa")
+        .to_string();
+
+    // Exportar el "programa objeto" con función tabla y cuádruplos
+    let programa = match generador.exportar_programa(nombre_programa) {
+        Ok(prog) => {
+            verbose_log(&format!("✓ Código intermedio preparado: {} cuádruplos\n", prog.cuadruplos.len()), 1, nivel_verbose);
+            prog
+        },
+        Err(e) => {
+            eprintln!("✗ Error al exportar programa: {}", e);
+            return;
+        }
+    };
+
+    verbose_log("=== Ejecutando programa en máquina virtual ===\n", 1, nivel_verbose);
+
+    // Crear VM con sistema de IO (usa consola real para stdin/stdout)
+    let mut vm = MaquinaVirtual::new(Box::new(ConsolaIO::new()));
+
+    // Cargar el programa objeto (inicializa tabla de funciones, constantes, etc.)
+    if let Err(e) = vm.cargar_programa(programa) {
+        eprintln!("✗ Error al cargar programa en VM: {}", e);
+        return;
+    }
+
+    // Ejecutar el programa
+    match vm.ejecutar() {
+        Ok(_) => {
+            verbose_log("\n✓✓✓ Ejecución completada exitosamente ✓✓✓", 1, nivel_verbose);
+        },
+        Err(e) => {
+            eprintln!("\n✗✗✗ Error durante la ejecución ✗✗✗");
+            eprintln!("{}", e);
+            return;
+        }
+    }
 }

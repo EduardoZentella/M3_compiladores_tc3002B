@@ -1,0 +1,24 @@
+programa test_fibonacci_main;
+
+vars n, a, b, temp, i : entero;
+
+inicio {
+    n = 10;
+    a = 0;
+    b = 1;
+    i = 0;
+
+    escribe("Serie Fibonacci hasta:");
+    escribe(n);
+    escribe(a);
+    escribe(b);
+
+    mientras (i < n) haz {
+        temp = a;
+        a = b;
+        b = temp + b;
+        escribe(b);
+        i = i + 1;
+    }
+}
+fin

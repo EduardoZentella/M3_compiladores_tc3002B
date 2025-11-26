@@ -36,6 +36,8 @@ pub enum OperadorCuadruplo {
     Era,            // Activation Record
     Parametro,      // Paso de parámetro
     GoSub,          // Llamada a subrutina
+    EndFunc,        // Fin de función
+    Return,         // Retorno de función
 }
 
 impl OperadorCuadruplo {
@@ -59,6 +61,8 @@ impl OperadorCuadruplo {
             "era" => Some(OperadorCuadruplo::Era),
             "param" => Some(OperadorCuadruplo::Parametro),
             "gosub" => Some(OperadorCuadruplo::GoSub),
+            "endfunc" => Some(OperadorCuadruplo::EndFunc),
+            "return" => Some(OperadorCuadruplo::Return),
             _ => None,
         }
     }
@@ -101,6 +105,8 @@ impl fmt::Display for OperadorCuadruplo {
             OperadorCuadruplo::Era => "era",
             OperadorCuadruplo::Parametro => "param",
             OperadorCuadruplo::GoSub => "gosub",
+            OperadorCuadruplo::EndFunc => "endfunc",
+            OperadorCuadruplo::Return => "return",
         };
         write!(f, "{}", s)
     }
@@ -125,6 +131,8 @@ pub enum Operando {
     Etiqueta(usize),
     /// Pendiente (para saltos que se llenarán después)
     Pendiente,
+    /// Letrero (índice en tabla de strings, o el string directamente para compatibilidad)
+    Letrero(usize),
 }
 
 impl fmt::Display for Operando {
@@ -138,6 +146,7 @@ impl fmt::Display for Operando {
             Operando::Vacio => write!(f, "-"),
             Operando::Etiqueta(dir) => write!(f, "L{}", dir),
             Operando::Pendiente => write!(f, "?"),
+            Operando::Letrero(idx) => write!(f, "STR[{}]", idx),
         }
     }
 }

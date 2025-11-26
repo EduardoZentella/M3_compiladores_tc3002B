@@ -1,0 +1,28 @@
+programa test_factorial;
+
+vars num, fact : entero;
+
+entero factorial(n : entero) {
+    vars resultado, i : entero;
+
+    resultado = 1;
+    i = 1;
+
+    mientras (i < n) haz {
+        i = i + 1;
+        resultado = resultado * i;
+    }
+
+    regresa resultado;
+};
+
+inicio {
+    num = 5;
+    escribe("Factorial de:");
+    escribe(num);
+
+    fact = factorial(num);
+    escribe("Resultado:");
+    escribe(fact);
+}
+fin

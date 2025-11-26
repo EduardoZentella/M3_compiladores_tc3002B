@@ -1,8 +1,0 @@
-programa test;
-vars y : entero;
-inicio
-{
-    y = 20;
-    escribe ( y ) ;
-}
-fin

@@ -1,0 +1,18 @@
+programa test_io;
+
+vars nombre : entero;
+vars edad : entero;
+
+inicio {
+    escribe("Ingrese su nombre:");
+    escribe("Ingrese su edad:");
+
+    nombre = 100;
+    edad = 25;
+
+    escribe("Nombre:");
+    escribe(nombre);
+    escribe("Edad:");
+    escribe(edad);
+}
+fin

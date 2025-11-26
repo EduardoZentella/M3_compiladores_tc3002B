@@ -1,0 +1,19 @@
+programa test_expresiones;
+
+vars a, b, c, x, y, z : entero;
+
+inicio {
+    a = 5;
+    b = 10;
+    c = a + b * 2;
+    escribe(c);
+
+    x = 3;
+    y = 2;
+    z = x * y + 1;
+    escribe(z);
+
+    a = (b + 5) * 2;
+    escribe(a);
+}
+fin

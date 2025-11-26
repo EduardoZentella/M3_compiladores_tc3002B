@@ -12,12 +12,36 @@ use std::collections::HashMap;
 pub struct EntradaVariable {
     /// Tipo de dato de la variable (entero o flotante)
     pub tipo: TipoDato,
+
+    /// Dirección de memoria virtual asignada
+    pub direccion: usize,
+
+    /// Indica si esta variable es un parámetro de función
+    pub es_parametro: bool,
+
+    /// Posición del parámetro (si es parámetro), None si es variable local
+    pub posicion_parametro: Option<usize>,
 }
 
 impl EntradaVariable {
-    /// Crea una nueva entrada de variable
-    pub fn new(tipo: TipoDato) -> Self {
-        EntradaVariable { tipo }
+    /// Crea una nueva entrada de variable con dirección
+    pub fn new(tipo: TipoDato, direccion: usize) -> Self {
+        EntradaVariable {
+            tipo,
+            direccion,
+            es_parametro: false,
+            posicion_parametro: None,
+        }
+    }
+
+    /// Crea una nueva entrada de variable parámetro con dirección
+    pub fn new_parametro(tipo: TipoDato, direccion: usize, posicion: usize) -> Self {
+        EntradaVariable {
+            tipo,
+            direccion,
+            es_parametro: true,
+            posicion_parametro: Some(posicion),
+        }
     }
 }
 
@@ -40,7 +64,7 @@ impl TablaVariables {
 
     /// Agrega una variable a la tabla
     /// Lanza error si la variable ya existe en la tabla (declaración duplicada)
-    pub fn agregar(&mut self, nombre: &str, tipo: TipoDato) -> Result<(), String> {
+    pub fn agregar(&mut self, nombre: &str, tipo: TipoDato, direccion: usize) -> Result<(), String> {
         // Validar que la variable no exista
         if self.variables.contains_key(nombre) {
             return Err(format!(
@@ -52,8 +76,22 @@ impl TablaVariables {
         // Agregar la variable
         self.variables.insert(
             nombre.to_string(),
-            EntradaVariable::new(tipo),
+            EntradaVariable::new(tipo, direccion),
         );
+
+        Ok(())
+    }
+
+    /// Marca una variable existente como parámetro
+    pub fn marcar_como_parametro(&mut self, nombre: &str, posicion: usize) -> Result<(), String> {
+        let entrada = self.variables.get_mut(nombre)
+            .ok_or_else(|| format!(
+                "Error interno: Variable '{}' no existe para marcar como parámetro",
+                nombre
+            ))?;
+
+        entrada.es_parametro = true;
+        entrada.posicion_parametro = Some(posicion);
 
         Ok(())
     }
@@ -78,6 +116,26 @@ impl TablaVariables {
         self.variables
             .iter()
             .map(|(nombre, entrada)| (nombre.clone(), entrada.tipo))
+            .collect()
+    }
+
+    /// Obtiene los parámetros de la función (solo variables marcadas como parámetros)
+    /// Retorna un vector de (nombre, tipo) ordenado por posición del parámetro
+    pub fn obtener_parametros(&self) -> Vec<(String, TipoDato)> {
+        let mut parametros: Vec<_> = self.variables
+            .iter()
+            .filter(|(_, entrada)| entrada.es_parametro)
+            .map(|(nombre, entrada)| {
+                (nombre.clone(), entrada.tipo, entrada.posicion_parametro.unwrap_or(0))
+            })
+            .collect();
+
+        // Ordenar por posición
+        parametros.sort_by_key(|(_, _, pos)| *pos);
+
+        // Devolver solo nombre y tipo
+        parametros.into_iter()
+            .map(|(nombre, tipo, _)| (nombre, tipo))
             .collect()
     }
 

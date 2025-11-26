@@ -1,0 +1,11 @@
+programa test_simple;
+
+vars x, y : entero;
+
+inicio {
+    x = 5;
+    y = 10;
+    escribe(x);
+    escribe(y);
+}
+fin

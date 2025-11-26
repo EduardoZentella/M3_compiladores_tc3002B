@@ -10,6 +10,8 @@ pub enum TipoDato {
     Flotante,
     /// Tipo de dato caracter
     Char,
+    /// Tipo de dato string/letrero
+    Letrero,
 }
 
 impl fmt::Display for TipoDato {
@@ -18,6 +20,7 @@ impl fmt::Display for TipoDato {
             TipoDato::Entero => write!(f, "entero"),
             TipoDato::Flotante => write!(f, "flotante"),
             TipoDato::Char => write!(f, "char"),
+            TipoDato::Letrero => write!(f, "letrero"),
         }
     }
 }
@@ -29,6 +32,7 @@ impl TipoDato {
             "entero" => Some(TipoDato::Entero),
             "flotante" => Some(TipoDato::Flotante),
             "char" => Some(TipoDato::Char),
+            "letrero" => Some(TipoDato::Letrero),
             _ => None,
         }
     }

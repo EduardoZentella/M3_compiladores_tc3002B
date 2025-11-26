@@ -148,6 +148,14 @@ impl MemoriaVirtual {
                 self.global_char += 1;
                 Ok(dir)
             }
+            (TipoSegmento::Global, TipoDato::Letrero) => {
+                if self.global_char > GLOBAL_CHAR_FIN {
+                    return Err("Error: Desbordamiento de memoria global para letreros".to_string());
+                }
+                let dir = self.global_char;
+                self.global_char += 1;
+                Ok(dir)
+            }
 
             // Segmento Local
             (TipoSegmento::Local, TipoDato::Entero) => {
@@ -174,6 +182,14 @@ impl MemoriaVirtual {
                 self.local_char += 1;
                 Ok(dir)
             }
+            (TipoSegmento::Local, TipoDato::Letrero) => {
+                if self.local_char > LOCAL_CHAR_FIN {
+                    return Err("Error: Desbordamiento de memoria local para letreros".to_string());
+                }
+                let dir = self.local_char;
+                self.local_char += 1;
+                Ok(dir)
+            }
 
             // Segmento Temporal
             (TipoSegmento::Temporal, TipoDato::Entero) => {
@@ -195,6 +211,14 @@ impl MemoriaVirtual {
             (TipoSegmento::Temporal, TipoDato::Char) => {
                 if self.temporal_char > TEMPORAL_CHAR_FIN {
                     return Err("Error: Desbordamiento de memoria temporal para chars".to_string());
+                }
+                let dir = self.temporal_char;
+                self.temporal_char += 1;
+                Ok(dir)
+            }
+            (TipoSegmento::Temporal, TipoDato::Letrero) => {
+                if self.temporal_char > TEMPORAL_CHAR_FIN {
+                    return Err("Error: Desbordamiento de memoria temporal para letreros".to_string());
                 }
                 let dir = self.temporal_char;
                 self.temporal_char += 1;

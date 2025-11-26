@@ -1,0 +1,13 @@
+programa test_simple;
+
+vars x : entero;
+
+entero suma(a : entero) {
+    regresa a;
+};
+
+inicio {
+    x = suma(5);
+    escribe(x);
+}
+fin

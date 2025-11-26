@@ -4,3 +4,4 @@ pub mod sintactico;
 pub mod lexico;
 pub mod semantico;
 pub mod intermedio;
+pub mod vm;

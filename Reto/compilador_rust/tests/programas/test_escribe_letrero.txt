@@ -1,6 +1,0 @@
-programa test;
-inicio
-{
-    escribe ( "Hola" ) ;
-}
-fin

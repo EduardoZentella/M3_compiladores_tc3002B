@@ -14,7 +14,18 @@ use crate::intermedio::{Cuadruplo, OperadorCuadruplo, memoria::GestorMemoria};
 use crate::intermedio::memoria_virtual::MemoriaVirtual;
 use crate::semantico::{CuboSemantico, TipoDato, ContextoSemantico};
 use crate::intermedio::cuadruplo::Operando;
-use std::collections::VecDeque;
+use std::collections::{VecDeque, HashMap};
+
+/// Metadatos de una función recopilados durante la generación de código
+#[derive(Debug, Clone)]
+pub struct MetadatosFuncion {
+    pub nombre: String,
+    pub direccion_inicio: usize,
+    pub tiene_retorno: bool,
+    pub tipo_retorno: Option<TipoDato>,
+    pub parametros: Vec<(String, TipoDato)>,
+}
+
 
 /// Generador de cuádruplos para código intermedio
 pub struct GeneradorCuadruplos {
@@ -51,6 +62,16 @@ pub struct GeneradorCuadruplos {
     // Contexto semántico (para buscar variables)
     /// Referencia al contexto semántico del compilador
     contexto: Option<*const ContextoSemantico>,
+
+    // Metadatos de funciones (construidos durante generación de código)
+    /// Mapa de funciones con sus metadatos (direccion_inicio, parametros, etc.)
+    metadatos_funciones: HashMap<String, MetadatosFuncion>,
+
+    /// Nombre de la función actual siendo compilada
+    funcion_actual: Option<String>,
+
+    /// Tabla de strings literales (para letreros)
+    tabla_strings: Vec<String>,
 }
 
 impl GeneradorCuadruplos {
@@ -67,6 +88,9 @@ impl GeneradorCuadruplos {
             memoria_virtual: MemoriaVirtual::new(),
             cubo_semantico: CuboSemantico::new(),
             contexto: None,
+            metadatos_funciones: HashMap::new(),
+            funcion_actual: None,
+            tabla_strings: Vec::new(),
         }
     }
 
@@ -88,6 +112,17 @@ impl GeneradorCuadruplos {
     /// PN1: Procesar un identificador o constante
     /// PilaO.Push(id.name) y PTypes.Push(id.type)
     pub fn procesar_operando(&mut self, nombre: &str) -> Result<(), String> {
+        // Si es un letrero (string literal entre comillas)
+        if nombre.starts_with('"') && nombre.ends_with('"') {
+            // Agregar el string a la tabla y obtener su índice
+            let idx = self.tabla_strings.len();
+            self.tabla_strings.push(nombre.to_string());
+            
+            self.pilao.push(Operando::Letrero(idx));
+            self.ptypes.push(TipoDato::Letrero);
+            return Ok(());
+        }
+
         // Si es un número (constante)
         if let Ok(valor_entero) = nombre.parse::<i32>() {
             self.pilao.push(Operando::ConstanteEntera(valor_entero));
@@ -101,11 +136,12 @@ impl GeneradorCuadruplos {
             return Ok(());
         }
 
-        // Si es una variable, buscar su tipo
+        // Si es una variable, buscar su tipo y dirección
         let contexto = self.obtener_contexto()?;
         let tipo = contexto.obtener_tipo_variable(nombre)?;
+        let direccion = contexto.obtener_direccion_variable(nombre)?;
 
-        self.pilao.push(Operando::Variable(nombre.to_string()));
+        self.pilao.push(Operando::Direccion(direccion));
         self.ptypes.push(tipo);
 
         Ok(())
@@ -295,9 +331,10 @@ impl GeneradorCuadruplos {
     /// Generar cuádruplo de asignación
     /// variable = expresión
     pub fn generar_asignacion(&mut self, variable: &str) -> Result<(), String> {
-        // Obtener tipo de la variable
+        // Obtener tipo y dirección de la variable
         let contexto = self.obtener_contexto()?;
         let tipo_var = contexto.obtener_tipo_variable(variable)?;
+        let dir_var = contexto.obtener_direccion_variable(variable)?;
 
         // Obtener operando de la expresión
         let operando_expr = self.pilao.pop()
@@ -317,12 +354,12 @@ impl GeneradorCuadruplos {
             }
         }
 
-        // Generar cuádruplo: (=, expresión, -, variable)
+        // Generar cuádruplo: (=, expresión, -, dirección_variable)
         let cuadruplo = Cuadruplo::new(
             OperadorCuadruplo::Asignacion,
             operando_expr.clone(),
             Operando::Vacio,
-            Operando::Variable(variable.to_string()),
+            Operando::Direccion(dir_var),
         );
 
         self.quad.push_back(cuadruplo);
@@ -358,16 +395,17 @@ impl GeneradorCuadruplos {
 
     /// Generar cuádruplo de lectura (lee)
     pub fn generar_lectura(&mut self, variable: &str) -> Result<(), String> {
-        // Validar que la variable exista
+        // Validar que la variable exista y obtener su dirección
         let contexto = self.obtener_contexto()?;
         contexto.obtener_tipo_variable(variable)?;
+        let direccion = contexto.obtener_direccion_variable(variable)?;
 
-        // Generar cuádruplo: (lee, -, -, variable)
+        // Generar cuádruplo: (lee, -, -, dirección_variable)
         let cuadruplo = Cuadruplo::new(
             OperadorCuadruplo::Lectura,
             Operando::Vacio,
             Operando::Vacio,
-            Operando::Variable(variable.to_string()),
+            Operando::Direccion(direccion),
         );
 
         self.quad.push_back(cuadruplo);
@@ -544,13 +582,74 @@ impl GeneradorCuadruplos {
 
     // ==================== LLAMADAS A FUNCIONES ====================
 
-    /// Paso 2: Generar ERA (Activation Record)
-    pub fn generar_era(&mut self) -> Result<(), String> {
-        // Por ahora, simplemente generar el cuádruplo ERA
-        // En una implementación completa, se calcularía el tamaño del registro de activación
+    /// Marcar el inicio de una función durante la compilación
+    /// Esto debe llamarse cuando se reduce la producción de declaración de función
+    pub fn iniciar_funcion(&mut self, nombre: &str) -> Result<(), String> {
+        let contexto = self.obtener_contexto()?;
+
+        // Obtener información del contexto semántico
+        let entrada_funcion = contexto.dir_funciones.buscar_funcion(nombre)
+            .ok_or_else(|| format!("Función '{}' no existe en el directorio", nombre))?;
+
+        // Extraer tipo de retorno
+        let (tiene_retorno, tipo_retorno) = match &entrada_funcion.tipo_retorno {
+            crate::semantico::tipos::TipoRetorno::Nula => (false, None),
+            crate::semantico::tipos::TipoRetorno::Tipo(t) => (true, Some(t.clone())),
+        };
+
+        // Obtener parámetros de la tabla de variables
+        let parametros = contexto.dir_funciones.obtener_parametros(nombre);
+
+        // Crear metadatos
+        let metadatos = MetadatosFuncion {
+            nombre: nombre.to_string(),
+            direccion_inicio: self.quad.len(), // La función empieza en el cuádruplo actual
+            tiene_retorno,
+            tipo_retorno,
+            parametros,
+        };
+
+        // Guardar metadatos
+        self.metadatos_funciones.insert(nombre.to_string(), metadatos);
+        self.funcion_actual = Some(nombre.to_string());
+
+        Ok(())
+    }
+
+    /// Marcar el fin de una función y generar ENDFUNC
+    /// Se llama cuando se reduce la producción completa de función
+    pub fn finalizar_funcion(&mut self) -> Result<(), String> {
+        // Generar cuádruplo ENDFUNC
+        self.generar_endfunc()?;
+
+        // Limpiar función actual
+        self.funcion_actual = None;
+
+        Ok(())
+    }
+
+    /// Paso 1: Verificar que una función existe y guardar su nombre
+    pub fn iniciar_llamada(&mut self, nombre_func: &str) -> Result<(), String> {
+        let contexto = self.obtener_contexto()?;
+        contexto.verificar_funcion_existe(nombre_func)?;
+
+        // Guardar el nombre de la función para usarlo en generar_gosub
+        self.pilao.push(Operando::Variable(nombre_func.to_string()));
+
+        Ok(())
+    }
+
+    /// Paso 2: Generar ERA (Expand Activation Record)
+    /// Se invoca cuando se reduce <LLAMADA_HEADER> (después de procesar id)
+    pub fn generar_era(&mut self, nombre_func: &str) -> Result<(), String> {
+        // Verificar que la función existe
+        let contexto = self.obtener_contexto()?;
+        contexto.verificar_funcion_existe(nombre_func)?;
+
+        // Generar cuádruplo ERA con el nombre de la función
         let cuadruplo = Cuadruplo::new(
             OperadorCuadruplo::Era,
-            Operando::Vacio,
+            Operando::Variable(nombre_func.to_string()),
             Operando::Vacio,
             Operando::Vacio,
         );
@@ -559,17 +658,19 @@ impl GeneradorCuadruplos {
         Ok(())
     }
 
-    /// Paso 3-4: Generar PARAMETER
-    pub fn generar_parameter(&mut self) -> Result<(), String> {
+    /// Paso 3-4: Generar PARAM
+    /// Se invoca cuando se procesa cada expresión en la lista de argumentos
+    pub fn generar_param(&mut self, num_param: usize) -> Result<(), String> {
         let operando = self.pilao.pop()
             .ok_or("Error: No hay parámetro para pasar")?;
         self.ptypes.pop();
 
+        // Generar cuádruplo: (param, argumento, -, num_param)
         let cuadruplo = Cuadruplo::new(
             OperadorCuadruplo::Parametro,
             operando.clone(),
             Operando::Vacio,
-            Operando::Vacio,
+            Operando::ConstanteEntera(num_param as i32),
         );
 
         self.quad.push_back(cuadruplo);
@@ -578,22 +679,92 @@ impl GeneradorCuadruplos {
         Ok(())
     }
 
-    /// Paso 5: Verificar número de parámetros (stub por ahora)
-    pub fn verificar_parametros(&mut self) -> Result<(), String> {
-        // TODO: Implementar verificación real de número y tipos de parámetros
+    /// Paso 6: Generar GOSUB
+    /// Se invoca cuando se reduce <LLAMADA> completa
+    pub fn generar_gosub(&mut self, nombre_func: &str) -> Result<(), String> {
+        // Primero verificamos si la función tiene retorno y obtenemos el tipo
+        let tipo_retorno_opt = {
+            let contexto = self.obtener_contexto()?;
+            contexto.obtener_tipo_retorno_funcion(nombre_func).ok()
+        };
+
+        // Usar el nombre de la función como operando
+        let cuadruplo = Cuadruplo::new(
+            OperadorCuadruplo::GoSub,
+            Operando::Variable(nombre_func.to_string()),
+            Operando::Vacio,
+            Operando::Vacio,
+        );
+
+        self.quad.push_back(cuadruplo);
+
+        // Si la función tiene retorno, generar temporal para el resultado
+        if let Some(tipo_retorno) = tipo_retorno_opt {
+            // La función tiene retorno (no es Nula)
+            let num_temporal = self.gestor_memoria.siguiente_temporal(tipo_retorno);
+            let resultado = Operando::Temporal(num_temporal);
+
+            // Generar cuádruplo: (=, RET, -, temp)
+            let cuadruplo_ret = Cuadruplo::new(
+                OperadorCuadruplo::Asignacion,
+                Operando::Variable("RET".to_string()),
+                Operando::Vacio,
+                resultado.clone(),
+            );
+
+            self.quad.push_back(cuadruplo_ret);
+
+            // Pushear el temporal a la pila de operandos
+            self.pilao.push(resultado);
+            self.ptypes.push(tipo_retorno);
+        }
+        // Si es None, la función es Nula (void) - no hacer nada
+
         Ok(())
     }
 
-    /// Paso 6: Generar GOSUB
-    pub fn generar_gosub(&mut self) -> Result<(), String> {
+    /// Generar ENDFUNC (fin de función)
+    /// Se invoca cuando se reduce <FUNCS> completa
+    pub fn generar_endfunc(&mut self) -> Result<(), String> {
         let cuadruplo = Cuadruplo::new(
-            OperadorCuadruplo::GoSub,
+            OperadorCuadruplo::EndFunc,
             Operando::Vacio,
             Operando::Vacio,
             Operando::Vacio,
         );
 
         self.quad.push_back(cuadruplo);
+        Ok(())
+    }
+
+    /// Generar RETURN (retorno de función con valor)
+    /// Se invoca cuando se procesa un estatuto return
+    pub fn generar_return(&mut self) -> Result<(), String> {
+        let operando = self.pilao.pop()
+            .ok_or("Error: No hay valor de retorno")?;
+        let _tipo = self.ptypes.pop();
+
+        // Generar cuádruplo: (=, expresión, -, RET)
+        let cuadruplo = Cuadruplo::new(
+            OperadorCuadruplo::Asignacion,
+            operando.clone(),
+            Operando::Vacio,
+            Operando::Variable("RET".to_string()),
+        );
+
+        self.quad.push_back(cuadruplo);
+        self.liberar_si_temporal(&operando);
+
+        // Generar RETURN
+        let cuadruplo_return = Cuadruplo::new(
+            OperadorCuadruplo::Return,
+            Operando::Vacio,
+            Operando::Vacio,
+            Operando::Vacio,
+        );
+
+        self.quad.push_back(cuadruplo_return);
+
         Ok(())
     }
 
@@ -628,6 +799,11 @@ impl GeneradorCuadruplos {
     /// Obtiene la cola de cuádruplos generados
     pub fn obtener_cuadruplos(&self) -> &VecDeque<Cuadruplo> {
         &self.quad
+    }
+
+    /// Obtiene la tabla de strings literales
+    pub fn obtener_tabla_strings(&self) -> &Vec<String> {
+        &self.tabla_strings
     }
 
     /// Imprime todos los cuádruplos generados
@@ -668,6 +844,107 @@ impl GeneradorCuadruplos {
             "POper: {:?}\nPilaO: {:?}\nPTypes: {:?}",
             self.poper, self.pilao, self.ptypes
         )
+    }
+
+    /// Exporta el programa compilado como ProgramaObjeto
+    /// Este método crea el "binario" listo para la VM
+    pub fn exportar_programa(&self, nombre_programa: String) -> Result<crate::intermedio::programa::ProgramaObjeto, String> {
+        use crate::intermedio::programa::{ProgramaObjeto, InfoFuncionPrograma};
+        use std::collections::HashMap;
+        use crate::vm::memoria::Valor;
+
+        // Construir mapa de funciones desde los metadatos recopilados
+        let mut mapa_funciones = HashMap::new();
+
+        // Si no hay funciones en metadatos (programa simple sin funciones declaradas),
+        // crear entrada para "main" por defecto
+        if self.metadatos_funciones.is_empty() {
+            mapa_funciones.insert("main".to_string(), InfoFuncionPrograma {
+                nombre: "main".to_string(),
+                direccion_inicio: 0,
+                tiene_retorno: false,
+                tipo_retorno: None,
+                num_parametros: 0,
+            });
+        } else {
+            // Usar los metadatos recopilados durante la compilación
+            for (nombre, metadatos) in &self.metadatos_funciones {
+                let tipo_retorno_str = metadatos.tipo_retorno.as_ref()
+                    .map(|t| format!("{:?}", t));
+
+                mapa_funciones.insert(nombre.clone(), InfoFuncionPrograma {
+                    nombre: nombre.clone(),
+                    direccion_inicio: metadatos.direccion_inicio,
+                    tiene_retorno: metadatos.tiene_retorno,
+                    tipo_retorno: tipo_retorno_str,
+                    num_parametros: metadatos.parametros.len(),
+                });
+            }
+
+            // Asegurarse de que "main" existe (puede ser el programa principal)
+            if !mapa_funciones.contains_key("main") {
+                mapa_funciones.insert("main".to_string(), InfoFuncionPrograma {
+                    nombre: "main".to_string(),
+                    direccion_inicio: 0,
+                    tiene_retorno: false,
+                    tipo_retorno: None,
+                    num_parametros: 0,
+                });
+            }
+        }
+
+        // Construir mapa de constantes escaneando cuádruplos
+        let mut mapa_constantes = HashMap::new();
+        let mut siguiente_dir_constante = 15000; // Segmento de constantes empieza en 15000
+
+        for cuadruplo in &self.quad {
+            // Función auxiliar para agregar constante si no existe
+            let mut agregar_constante = |valor: Valor| {
+                // Verificar si ya existe
+                let existe = mapa_constantes.values().any(|v| match (v, &valor) {
+                    (Valor::Entero(a), Valor::Entero(b)) => a == b,
+                    (Valor::Flotante(a), Valor::Flotante(b)) => (a - b).abs() < f64::EPSILON,
+                    _ => false,
+                });
+
+                if !existe {
+                    mapa_constantes.insert(siguiente_dir_constante, valor);
+                    siguiente_dir_constante += 1;
+                }
+            };
+
+            // Revisar operando izquierdo
+            match &cuadruplo.operando_izq {
+                Operando::ConstanteEntera(v) => agregar_constante(Valor::Entero(*v)),
+                Operando::ConstanteFlotante(v) => agregar_constante(Valor::Flotante(*v)),
+                _ => {}
+            }
+
+            // Revisar operando derecho
+            match &cuadruplo.operando_der {
+                Operando::ConstanteEntera(v) => agregar_constante(Valor::Entero(*v)),
+                Operando::ConstanteFlotante(v) => agregar_constante(Valor::Flotante(*v)),
+                _ => {}
+            }
+
+            // Revisar resultado (puede tener constantes en casos especiales)
+            match &cuadruplo.resultado {
+                Operando::ConstanteEntera(v) => agregar_constante(Valor::Entero(*v)),
+                Operando::ConstanteFlotante(v) => agregar_constante(Valor::Flotante(*v)),
+                _ => {}
+            }
+        }
+
+        // Crear programa objeto
+        let programa = ProgramaObjeto::crear(
+            nombre_programa,
+            self.quad.iter().cloned().collect(),
+            mapa_funciones,
+            mapa_constantes,
+            self.tabla_strings.clone(),
+        );
+
+        Ok(programa)
     }
 }
 

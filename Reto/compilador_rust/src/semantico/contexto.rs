@@ -11,6 +11,7 @@ use crate::semantico::{
     TipoRetorno,
 };
 use crate::semantico::tabla_variables::EntradaVariable;
+use crate::intermedio::memoria_virtual::{MemoriaVirtual, TipoSegmento};
 
 /// Contexto Semántico
 /// Mantiene el estado del análisis semántico durante el parsing.
@@ -31,6 +32,9 @@ pub struct ContextoSemantico {
 
     /// Nombre del programa (alcance global)
     nombre_programa: String,
+
+    /// Gestor de memoria virtual para asignar direcciones a variables
+    memoria_virtual: MemoriaVirtual,
 }
 
 impl ContextoSemantico {
@@ -42,6 +46,7 @@ impl ContextoSemantico {
             alcance_actual: String::new(),
             tipo_actual: None,
             nombre_programa: String::new(),
+            memoria_virtual: MemoriaVirtual::new(),
         }
     }
 
@@ -72,8 +77,66 @@ impl ContextoSemantico {
         // Agregar la función al directorio
         self.dir_funciones.agregar_funcion(nombre, tipo_retorno)?;
 
-        // Cambiar el alcance actual a la nueva función
+        // Cambiar el alcance actual a la nueva función (para agregar parámetros)
         self.alcance_actual = nombre.to_string();
+
+        Ok(())
+    }
+
+    /// Agrega un parámetro a la función actual
+    /// Se llama durante el procesamiento de <ARG_LIST>
+    pub fn agregar_parametro(&mut self, nombre: &str, tipo: TipoDato) -> Result<(), String> {
+        // Los parámetros son como variables locales de la función
+        // Asignar dirección de memoria en segmento local
+        let direccion = self.memoria_virtual.asignar_variable(tipo, TipoSegmento::Local)?;
+
+        // Agregar el parámetro como variable de la función
+        self.dir_funciones.agregar_variable_con_direccion(
+            &self.alcance_actual,
+            nombre,
+            tipo,
+            direccion
+        )?;
+
+        // También registrarlo como parámetro formal en la función
+        self.dir_funciones.agregar_parametro_a_funcion(&self.alcance_actual, nombre, tipo)?;
+
+        Ok(())
+    }
+
+    /// Finaliza la declaración de la firma de la función
+    /// Se llama después de procesar todos los parámetros, antes de entrar al cuerpo
+    pub fn finalizar_declaracion_funcion(&mut self) -> Result<(), String> {
+        // Por ahora no hace nada especial, pero mantiene consistencia
+        Ok(())
+    }
+
+    /// Entra al ámbito de ejecución de una función
+    /// Se llama justo antes de procesar el cuerpo de la función
+    pub fn entrar_ambito_funcion(&mut self, nombre: &str) -> Result<(), String> {
+        // El ámbito ya está en la función desde iniciar_funcion
+        if self.alcance_actual != nombre {
+            return Err(format!(
+                "Error interno: Intentando entrar al ámbito de '{}' pero el alcance actual es '{}'",
+                nombre, self.alcance_actual
+            ));
+        }
+        Ok(())
+    }
+
+    /// Sale del ámbito de una función y vuelve al global
+    /// Se llama al terminar de procesar una función completa
+    pub fn salir_ambito_funcion(&mut self) -> Result<(), String> {
+        if self.alcance_actual == self.nombre_programa {
+            return Err("Error interno: Intentando salir del ámbito pero ya estamos en el global".to_string());
+        }
+
+        // Resetear contadores locales y temporales en memoria virtual
+        self.memoria_virtual.reiniciar_local();
+        self.memoria_virtual.reiniciar_temporal();
+
+        // Volver al alcance global
+        self.alcance_actual = self.nombre_programa.clone();
 
         Ok(())
     }
@@ -114,8 +177,23 @@ impl ContextoSemantico {
             "Error interno: No hay tipo actual establecido para declaración de variable".to_string()
         )?;
 
-        // Agregar la variable al alcance actual
-        self.dir_funciones.agregar_variable(&self.alcance_actual, nombre, tipo)
+        // Determinar si es global o local
+        let es_global = self.alcance_actual == self.nombre_programa;
+
+        // Asignar dirección de memoria
+        let direccion = if es_global {
+            self.memoria_virtual.asignar_variable(tipo, TipoSegmento::Global)?
+        } else {
+            self.memoria_virtual.asignar_variable(tipo, TipoSegmento::Local)?
+        };
+
+        // Agregar la variable al alcance actual con su dirección
+        self.dir_funciones.agregar_variable_con_direccion(
+            &self.alcance_actual,
+            nombre,
+            tipo,
+            direccion
+        )
     }
 
     /// Busca una variable (primero en alcance local, luego en global)
@@ -146,10 +224,33 @@ impl ContextoSemantico {
             ))
     }
 
+    /// Obtiene la dirección de memoria asignada a una variable
+    pub fn obtener_direccion_variable(&self, nombre: &str) -> Result<usize, String> {
+        self.buscar_variable(nombre)
+            .map(|entrada| entrada.direccion)
+            .ok_or_else(|| format!(
+                "Error semántico: Variable '{}' no declarada",
+                nombre
+            ))
+    }
+
     /// Verifica que una función exista en el directorio
     pub fn verificar_funcion_existe(&self, nombre: &str) -> Result<(), String> {
         if self.dir_funciones.buscar_funcion(nombre).is_some() {
             Ok(())
+        } else {
+            Err(format!("Error semántico: Función '{}' no declarada", nombre))
+        }
+    }
+
+    /// Obtiene el tipo de retorno de una función
+    /// Retorna Ok(tipo) si la función tiene retorno, Err si es nula
+    pub fn obtener_tipo_retorno_funcion(&self, nombre: &str) -> Result<TipoDato, String> {
+        if let Some(funcion) = self.dir_funciones.buscar_funcion(nombre) {
+            match funcion.tipo_retorno {
+                TipoRetorno::Tipo(tipo) => Ok(tipo),
+                TipoRetorno::Nula => Err(format!("Función '{}' no tiene retorno (nula)", nombre)),
+            }
         } else {
             Err(format!("Error semántico: Función '{}' no declarada", nombre))
         }

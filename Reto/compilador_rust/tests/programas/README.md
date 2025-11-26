@@ -1,144 +1,233 @@
-# Programas de Prueba
+# Tests del Compilador Patito - Validación de Rúbrica
 
-Este directorio contiene programas de ejemplo en lenguaje Patito para probar el compilador.
+Este directorio contiene programas de prueba diseñados para validar cada dimensión de la rúbrica del proyecto.
 
-## Organización
+## Estructura de Tests
 
-### Programas Básicos
+### Dimensión A: Expresiones Aritméticas
 
-- `test_minimal.txt` - Programa mínimo válido
-- `test_simple.txt` - Programa simple con variables
-- `test_var_assign.txt` - Asignación de variables
-- `test_just_var.txt` - Solo declaración de variables
-- `test_two_assigns.txt` - Múltiples asignaciones
-- `test_solo_asign.txt` - Asignación simple
-- `test_two_consts.txt` - Uso de constantes
-- `test_with_spaces.txt` - Programa con espacios adicionales
-- `test_fresh.txt` - Programa de prueba general
+**Archivo:** `01_expresiones_aritmeticas.txt`
 
-### Expresiones
+- **Prueba:** Operadores +, -, \*, / con precedencia correcta
+- **Validación:** Cuádruplos generados en orden correcto
+- **Ejemplo:** `c = a + b * 2` debe generar `MULT`, luego `SUMA`
 
-- `test_expr.txt` - Expresiones aritméticas
+### Dimensión B: Entrada/Salida
 
-### Entrada/Salida
+**Archivo:** `02_entrada_salida.txt`
 
-- `test_escribe_var.txt` - Escritura de variables
-- `test_escribe_letrero.txt` - Escritura de letreros/strings
+- **Prueba:** Estatutos `escribe()` con variables y letreros
+- **Validación:** Cuádruplos de tipo `Escritura` generados
+- **Nota:** Lectura (`lee`) no implementada actualmente
 
-### Control de Flujo (con Constantes)
+### Dimensión C: Decisiones
 
-Estos tests funcionan correctamente:
+**Archivo:** `03_decisiones.txt`
 
-- `test_if_const.txt` - IF simple con constantes
-- `test_if_simple.txt` - IF básico
-- `test_if_else_const.txt` - IF-ELSE con constantes
-- `test_while_const.txt` - WHILE con constantes
-- `test_complejo_const.txt` - Estructuras anidadas (WHILE + IF-ELSE)
-- `test_control_flow.txt` - Control de flujo general
+- **Prueba:**
+  - `si (condicion) entonces { ... };`
+  - `si (condicion) entonces { ... } sino { ... };`
+  - Decisiones anidadas
+- **Validación:**
+  - Cuádruplos `GOTOF` (salto condicional falso)
+  - Cuádruplos `GOTO` (salto incondicional para else)
+  - Fill correcto de saltos pendientes
 
-### Control de Flujo (con Variables)
+### Dimensión D: Ciclos
 
-Estos tests tienen problemas conocidos debido a un conflicto en la tabla SLR:
+**Archivo:** `04_ciclos.txt`
 
-- `test_if_var.txt` - IF con variable en condición (Error estado 32)
-- `test_if_else.txt` - IF-ELSE con variable (Error estado 32)
-- `test_while.txt` - WHILE con variable (Error estado 32)
+- **Prueba:**
+  - `mientras (condicion) haz { ... }`
+  - Ciclos múltiples
+  - Acumuladores y contadores
+- **Validación:**
+  - Marca de inicio de ciclo guardada
+  - `GOTOF` para salir del ciclo
+  - `GOTO` para regresar al inicio
+  - Fill correcto de saltos
 
-**Problema**: La tabla SLR tiene un conflicto en estado 32 cuando procesa variables en expresiones relacionales.
-**Workaround**: Usar solo constantes en condiciones por ahora.
+### Dimensión E: Funciones (Definición)
 
-## Ejecutar Tests
+**Archivos:**
 
-### Compilar un Programa
+- `05_factorial_funcion.txt`
+- `06_fibonacci_funcion.txt`
+- `09_multiples_funciones.txt`
+
+**Prueba:**
+
+- Definición de funciones con tipo de retorno
+- Parámetros formales con tipos
+- Variables locales dentro de funciones
+- Múltiples funciones en un programa
+
+**Validación:**
+
+- Directorio de funciones poblado correctamente
+- Cuádruplo `ENDFUNC` al final de cada función
+- Alcance de variables (local vs global)
+
+### Dimensión F: Llamadas a Funciones
+
+**Archivos:**
+
+- `05_factorial_funcion.txt`
+- `06_fibonacci_funcion.txt`
+- `09_multiples_funciones.txt`
+- `10_programa_completo.txt`
+
+**Prueba:**
+
+- Llamadas a funciones desde main
+- Paso de parámetros
+- Asignación del valor de retorno
+
+**Validación:**
+
+- Cuádruplo `ERA` (Activation Record)
+- Cuádruplos `PARAM` para cada parámetro
+- Cuádruplo `GOSUB` para saltar a la función
+- Verificación de número y tipo de parámetros
+
+## Tests Sin Funciones (Solo Main)
+
+### `07_factorial_main.txt`
+
+Calcula factorial usando solo el bloque `inicio` (sin funciones)
+
+- Valida: Ciclos, expresiones, variables
+
+### `08_fibonacci_main.txt`
+
+Genera serie Fibonacci usando solo el bloque `inicio`
+
+- Valida: Ciclos, asignaciones múltiples, escribe en ciclo
+
+## Programa Completo - Integración Total
+
+### `10_programa_completo.txt`
+
+Combina todas las dimensiones:
+
+- Variables globales y locales
+- Funciones con parámetros
+- Llamadas a funciones
+- Ciclos dentro de funciones
+- Decisiones con else
+- Expresiones aritméticas y relacionales
+- Entrada/salida
+
+## Cómo Ejecutar los Tests
+
+### Ejecución Individual
 
 ```bash
-# Desde la raíz del proyecto
-cargo run --bin compilador_rust tests/programas/NOMBRE_ARCHIVO.txt
+# Sin verbose (solo output)
+cargo run -- tests/programas/01_expresiones_aritmeticas.txt
 
-# Ejemplos:
-cargo run --bin compilador_rust tests/programas/test_if_const.txt
-cargo run --bin compilador_rust tests/programas/test_while_const.txt
-cargo run --bin compilador_rust tests/programas/test_complejo_const.txt
+# Con verbose nivel 1 (fases principales)
+cargo run -- tests/programas/02_entrada_salida.txt -v
+
+# Con verbose nivel 2 (acciones semánticas)
+cargo run -- tests/programas/03_decisiones.txt -vv
+
+# Con verbose nivel 3 (debug completo)
+cargo run -- tests/programas/04_ciclos.txt -vvv
 ```
 
-### Tests Recomendados
+### Ejecutar Todos los Tests
 
 ```bash
-# Tests básicos
-cargo run --bin compilador_rust tests/programas/test_simple.txt
-cargo run --bin compilador_rust tests/programas/test_expr.txt
-
-# Tests de control de flujo (todos deben pasar)
-cargo run --bin compilador_rust tests/programas/test_if_const.txt
-cargo run --bin compilador_rust tests/programas/test_if_else_const.txt
-cargo run --bin compilador_rust tests/programas/test_while_const.txt
-cargo run --bin compilador_rust tests/programas/test_complejo_const.txt
-
-# Tests de E/S
-cargo run --bin compilador_rust tests/programas/test_escribe_var.txt
+#!/bin/bash
+for file in tests/programas/*.txt; do
+    echo "========================================="
+    echo "Testing: $file"
+    echo "========================================="
+    cargo run -- "$file" -v
+    echo ""
+done
 ```
 
-## Cuádruplos Esperados
+## Mapeo a Rúbrica
 
-### test_if_const.txt
+| Dimensión | Descripción                                                                    | Tests que Validan |
+| --------- | ------------------------------------------------------------------------------ | ----------------- |
+| **A**     | Expresiones aritméticas correctamente parentizadas con jerarquía de operadores | 01, 07, 08, 10    |
+| **B**     | Estatutos de I/O (lectura y escritura)                                         | 02, 07, 08, 10    |
+| **C**     | Estatuto condicional (decisión if/else)                                        | 03, 10            |
+| **D**     | Estatuto cíclico (while)                                                       | 04, 07, 08, 10    |
+| **E**     | Definir funciones con parámetros                                               | 05, 06, 09, 10    |
+| **F**     | Llamar funciones con parámetros                                                | 05, 06, 09, 10    |
 
-```
-0: a = 10
-1: t0 = 1 > 2
-2: GOTOF t0, goto 4
-3: a = 5
-```
+## Cuádruplos Esperados por Dimensión
 
-### test_if_else_const.txt
+### A: Expresiones
 
-```
-0: a = 10
-1: t0 = 1 > 2
-2: GOTOF t0, goto 5    ← Salta a else
-3: a = 100             ← Then
-4: GOTO 6              ← Salta después de else
-5: a = 200             ← Else
-```
+- `Suma`, `Resta`, `Multiplicacion`, `Division`
+- `Asignacion` de resultados a temporales y variables
 
-### test_while_const.txt
+### B: I/O
 
-```
-0: i = 0
-1: t0 = 1 < 10         ← Inicio ciclo
-2: GOTOF t0, goto 5    ← Salir si falso
-3: i = 5               ← Cuerpo
-4: GOTO 1              ← Volver a inicio
-```
+- `Escritura` con direcciones de variables o constantes
 
-### test_complejo_const.txt
+### C: Decisiones
 
-```
-0: suma = 0
-1: i = 1
-2: t0 = 1 < 10         ← WHILE condición
-3: GOTOF t0, goto 11   ← WHILE salida
-4: t0 = 2 > 1          ← IF condición
-5: GOTOF t0, goto 8    ← IF saltar a else
-6: suma = 10           ← IF then
-7: GOTO 9              ← IF saltar else
-8: suma = 20           ← IF else
-9: i = 2               ← Continuar después de IF
-10: GOTO 2             ← WHILE volver
-```
+- `Mayor`, `Menor`, `Igual`, `Diferente` (comparaciones)
+- `GOTOF` (goto falso - salta si condición es falsa)
+- `GOTO` (goto incondicional - para else)
 
-## Agregar Nuevos Tests
+### D: Ciclos
 
-Para agregar un nuevo programa de prueba:
+- `GOTOF` (salir del ciclo si condición falsa)
+- `GOTO` (regresar al inicio del ciclo)
 
-1. Crear archivo `.txt` en este directorio
-2. Seguir la sintaxis de Patito (ver gramática en `gramatica.txt`)
-3. Usar constantes en condiciones (por limitación actual)
-4. Ejecutar con el comando mostrado arriba
-5. Verificar los cuádruplos generados
+### E/F: Funciones
 
-## Convenciones
+- `ERA` (establecer registro de activación)
+- `PARAM` (pasar parámetros)
+- `GOSUB` (llamar función)
+- `ENDFUNC` (fin de función)
+- `RETURN` (retornar valor - si aplica)
 
-- Usar nombres descriptivos: `test_FUNCIONALIDAD.txt`
-- Incluir comentarios si el test es complejo
-- Mantener programas pequeños y enfocados
-- Para estructuras de control, preferir sufijo `_const` si usa constantes
+## Estado de Implementación
+
+### Completamente Implementado
+
+- [x] Expresiones aritméticas con precedencia
+- [x] Generación de cuádruplos
+- [x] Memoria virtual (segmentada 1000-24999)
+- [x] Escritura (`escribe`)
+- [x] Decisiones (if/else) con GOTOF/GOTO
+- [x] Ciclos (while) con saltos
+- [x] Definición de funciones
+- [x] Parámetros en funciones
+- [x] Directorio de funciones
+- [x] Tabla de variables por alcance
+- [x] Máquina Virtual ejecuta cuádruplos básicos
+
+### Parcialmente Implementado
+
+- [ ] Lectura (`lee`) - estructura creada pero no implementada
+- [ ] Llamadas a funciones - ERA/GOSUB/ENDFUNC generados, falta VM
+- [ ] Retorno de valores - estructura presente, falta integración completa
+
+### Notas Importantes
+
+1. **Ejecución Actual**: Los tests 01-04, 07-08 funcionan completamente (sin funciones)
+
+2. **Direcciones Virtuales**: Sistema completamente funcional
+   - GLOBAL: 1000-6999
+   - LOCAL: 7000-12999
+   - TEMPORAL: 13000-18999
+   - CONSTANTE: 19000-24999
+
+## Salida Esperada
+
+Cada test debe:
+
+1. Compilar sin errores sintácticos ni semánticos
+2. Generar cuádruplos correctos
+3. Mostrar el código intermedio generado
+4. Ejecutar en la VM (tests sin funciones: 01-04, 07-08)
+5. Ejecutar funciones (requiere completar VM: 05-06, 09-10)

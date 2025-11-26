@@ -10,9 +10,9 @@ struct ReglaToken {
     patron: Regex,
 }
 
-// Función auxiliar para logging
-fn verbose_log(mensaje: &str, is_verbose: &bool) {
-    if *is_verbose {
+// Función auxiliar para logging con niveles de verbose
+fn verbose_log(mensaje: &str, nivel_requerido: usize, nivel_actual: usize) {
+    if nivel_actual >= nivel_requerido {
         println!("{}", mensaje);
     }
 }
@@ -28,6 +28,7 @@ lazy_static! {
         ReglaToken { tipo: TipoToken::Vars, patron: Regex::new(r"^\bvars\b").unwrap() },
         ReglaToken { tipo: TipoToken::Entero, patron: Regex::new(r"^\bentero\b").unwrap() },
         ReglaToken { tipo: TipoToken::Flotante, patron: Regex::new(r"^\bflotante\b").unwrap() },
+        ReglaToken { tipo: TipoToken::LetreroTipo, patron: Regex::new(r"^\bletrero\b").unwrap() },
         ReglaToken { tipo: TipoToken::Escribe, patron: Regex::new(r"^\bescribe\b").unwrap() },
         ReglaToken { tipo: TipoToken::Mientras, patron: Regex::new(r"^\bmientras\b").unwrap() },
         ReglaToken { tipo: TipoToken::Haz, patron: Regex::new(r"^\bhaz\b").unwrap() },
@@ -35,6 +36,7 @@ lazy_static! {
         ReglaToken { tipo: TipoToken::Entonces, patron: Regex::new(r"^entonces\b").unwrap() },
         ReglaToken { tipo: TipoToken::Sino, patron: Regex::new(r"^sino\b").unwrap() },
         ReglaToken { tipo: TipoToken::Nula, patron: Regex::new(r"^\bnula\b").unwrap() },
+        ReglaToken { tipo: TipoToken::Regresa, patron: Regex::new(r"^\bregresa\b").unwrap() },
 
         // Constantes (deben ir antes de identificadores)
         ReglaToken { tipo: TipoToken::CteFlot, patron: Regex::new(r"^[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?").unwrap() },
@@ -70,7 +72,7 @@ lazy_static! {
 }
 
 // Funcion de analisis lexico
-pub fn analyze(input: &str, is_verbose: &bool) -> Result<Vec<Token>, String> {
+pub fn analyze(input: &str, nivel_verbose: usize) -> Result<Vec<Token>, String> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut linea = 1;
     let mut resto = input;
@@ -94,7 +96,8 @@ pub fn analyze(input: &str, is_verbose: &bool) -> Result<Vec<Token>, String> {
                     valor: valor.clone(),
                     linea,
                 });
-                verbose_log(&format!("Token encontrado: {:?} ('{}') en linea {}", tipo, valor, linea), is_verbose);
+                // Nivel 3: mostrar cada token encontrado
+                verbose_log(&format!("Token encontrado: {:?} ('{}') en linea {}", tipo, valor, linea), 3, nivel_verbose);
                 resto = &resto[mat.end()..];
                 matched = true;
                 break;

@@ -12,20 +12,20 @@ fn main() {
     println!("─────────────────────────");
     let mut tabla = TablaVariables::new();
 
-    println!("  Agregando variable 'x' (entero)...");
-    match tabla.agregar("x", TipoDato::Entero) {
+    println!("  Agregando variable 'x' (entero) en dirección 1000...");
+    match tabla.agregar("x", TipoDato::Entero, 1000) {
         Ok(_) => println!("    Variable 'x' agregada exitosamente"),
         Err(e) => println!("    Error: {}", e),
     }
 
-    println!("  Agregando variable 'total' (flotante)...");
-    match tabla.agregar("total", TipoDato::Flotante) {
+    println!("  Agregando variable 'total' (flotante) en dirección 3000...");
+    match tabla.agregar("total", TipoDato::Flotante, 3000) {
         Ok(_) => println!("    Variable 'total' agregada exitosamente"),
         Err(e) => println!("    Error: {}", e),
     }
 
-    println!("  Agregando variable 'contador' (entero)...");
-    match tabla.agregar("contador", TipoDato::Entero) {
+    println!("  Agregando variable 'contador' (entero) en dirección 1001...");
+    match tabla.agregar("contador", TipoDato::Entero, 1001) {
         Ok(_) => println!("    Variable 'contador' agregada exitosamente"),
         Err(e) => println!("    Error: {}", e),
     }
@@ -34,7 +34,7 @@ fn main() {
     println!("\nTEST 2: Validar Declaración Duplicada");
     println!("───────────────────────────────────────");
     println!("  Intentando agregar 'x' de nuevo...");
-    match tabla.agregar("x", TipoDato::Flotante) {
+    match tabla.agregar("x", TipoDato::Flotante, 3001) {
         Ok(_) => println!("    ERROR: No debería permitir duplicados"),
         Err(e) => println!("    Correctamente rechazado: {}", e),
     }

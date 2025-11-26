@@ -1,0 +1,23 @@
+programa test_ciclos;
+
+vars contador, suma : entero;
+
+inicio {
+    contador = 1;
+    suma = 0;
+
+    mientras (contador < 6) haz {
+        suma = suma + contador;
+        contador = contador + 1;
+    }
+
+    escribe("Suma:");
+    escribe(suma);
+
+    contador = 10;
+    mientras (contador > 0) haz {
+        escribe(contador);
+        contador = contador - 1;
+    }
+}
+fin

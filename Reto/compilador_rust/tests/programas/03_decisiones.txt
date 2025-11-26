@@ -1,0 +1,25 @@
+programa test_decisiones;
+
+vars x, y : entero;
+
+inicio {
+    x = 10;
+    y = 5;
+
+    si (x > y) entonces {
+        escribe("x es mayor");
+    };
+
+    si (x < y) entonces {
+        escribe("x es menor");
+    } sino {
+        escribe("x no es menor");
+    };
+
+    si (x == 10) entonces {
+        si (y == 5) entonces {
+            escribe("Ambos correctos");
+        };
+    };
+}
+fin

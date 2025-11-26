@@ -96,7 +96,51 @@ impl DirectorioFunciones {
             ))?;
 
         // Agregar la variable a la tabla de variables de la función
-        funcion.tabla_variables.agregar(nombre_variable, tipo)
+        // NOTA: Este método no asigna dirección (se usa solo en tests)
+        funcion.tabla_variables.agregar(nombre_variable, tipo, 0)
+    }
+
+    /// Agrega una variable con dirección de memoria a una función específica
+    pub fn agregar_variable_con_direccion(
+        &mut self,
+        nombre_funcion: &str,
+        nombre_variable: &str,
+        tipo: crate::semantico::tipos::TipoDato,
+        direccion: usize,
+    ) -> Result<(), String> {
+        // Buscar la función
+        let funcion = self.funciones.get_mut(nombre_funcion)
+            .ok_or_else(|| format!(
+                "Error semántico: Función '{}' no existe",
+                nombre_funcion
+            ))?;
+
+        // Agregar la variable a la tabla de variables de la función
+        funcion.tabla_variables.agregar(nombre_variable, tipo, direccion)
+    }
+
+    /// Agrega un parámetro formal a una función específica
+    pub fn agregar_parametro_a_funcion(
+        &mut self,
+        nombre_funcion: &str,
+        nombre_parametro: &str,
+        tipo: crate::semantico::tipos::TipoDato,
+    ) -> Result<(), String> {
+        // Buscar la función
+        let funcion = self.funciones.get_mut(nombre_funcion)
+            .ok_or_else(|| format!(
+                "Error interno: Función '{}' no existe al agregar parámetro",
+                nombre_funcion
+            ))?;
+
+        // Contar cuántos parámetros ya tiene la función
+        let posicion = funcion.tabla_variables.obtener_parametros().len();
+
+        // El parámetro ya debe estar agregado como variable (con dirección)
+        // Solo necesitamos marcarlo como parámetro
+        funcion.tabla_variables.marcar_como_parametro(nombre_parametro, posicion)?;
+
+        Ok(())
     }
 
     /// Busca una variable en una función específica
@@ -114,6 +158,21 @@ impl DirectorioFunciones {
     /// Retorna el número de funciones en el directorio
     pub fn cantidad_funciones(&self) -> usize {
         self.funciones.len()
+    }
+
+    /// Obtiene un iterador sobre todas las funciones (nombre, entrada)
+    /// Útil para exportar el directorio completo
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &EntradaFuncion)> {
+        self.funciones.iter()
+    }
+
+    /// Obtiene los parámetros de una función (nombre, tipo) en orden
+    pub fn obtener_parametros(&self, nombre_funcion: &str) -> Vec<(String, crate::semantico::tipos::TipoDato)> {
+        if let Some(funcion) = self.funciones.get(nombre_funcion) {
+            funcion.tabla_variables.obtener_parametros()
+        } else {
+            Vec::new()
+        }
     }
 
     /// Imprime el directorio de funciones completo (útil para debugging)

@@ -1,18 +1,19 @@
 <Programa> → programa id ; <VARS_OPT> <FUNCS_LIST> inicio <CUERPO> fin
-<VARS_OPT> → <VARS>
+<VARS_OPT> → <VARS> <VARS_OPT>
 <VARS_OPT> → ε
-<FUNCS_LIST> → <FUNCS><FUNCS_LIST>
+<FUNCS_LIST> → <FUNCS> <FUNCS_LIST>
 <FUNCS_LIST> → ε
 
 <VARS> → vars <VAR_LIST> : <TIPO> ;
-<VAR_LIST> → id <VAR_LIST'>
-<VAR_LIST'> → , id <VAR_LIST'>
-<VAR_LIST'> → ε
+<VAR_LIST> → id <VAR_LIST_PRIMA>
+<VAR_LIST_PRIMA> → , id <VAR_LIST_PRIMA>
+<VAR_LIST_PRIMA> → ε
 
 <TIPO> → entero
 <TIPO> → flotante
+<TIPO> → letrero
 
-<CUERPO> → { <ESTATUTO_LIST> }
+<CUERPO> → { <VARS_OPT> <ESTATUTO_LIST> }
 <ESTATUTO_LIST> → <ESTATUTO> <ESTATUTO_LIST>
 <ESTATUTO_LIST> → ε
 
@@ -21,7 +22,9 @@
 <ESTATUTO> → <CICLO>
 <ESTATUTO> → <LLAMADA> ;
 <ESTATUTO> → <IMPRIME>
+<ESTATUTO> → <RETURN>
 <ESTATUTO> → [ <ESTATUTO_LIST> ]
+<RETURN> → regresa <EXPRESIÓN> ;
 
 <IMPRIME> → escribe ( <OBJ_IMPRIME> <IMPRIME_LIST> ) ;
 <OBJ_IMPRIME> → <EXPRESIÓN>
@@ -37,9 +40,9 @@
 <SINO_OPT> → sino <CUERPO>
 <SINO_OPT> → ε
 
-<EXPRESIÓN> → <EXP> <EXPRESIÓN'>
-<EXPRESIÓN'> → <OPERADOR> <EXP>
-<EXPRESIÓN'> → ε
+<EXPRESIÓN> → <EXP> <EXPRESION_PRIMA>
+<EXPRESION_PRIMA> → <OPERADOR> <EXP>
+<EXPRESION_PRIMA> → ε
 <OPERADOR> → >
 <OPERADOR> → <
 <OPERADOR> → ==
@@ -48,36 +51,41 @@
 <CTE> → cte_ent
 <CTE> → cte_flot
 
-<EXP> → <TÉRMINO> <EXP’>
-<EXP’> → <+-> <TÉRMINO> <EXP’>
-<EXP’> → ε
+<EXP> → <TÉRMINO> <EXP_PRIMA>
+<EXP_PRIMA> → <+-> <TÉRMINO> <EXP_PRIMA>
+<EXP_PRIMA> → ε
 <+-> → +
 <+-> → -
 
-<TÉRMINO> → <FACTOR> <TÉRMINO'>
-<TÉRMINO'> → <*/> <FACTOR> <TÉRMINO'>
-<TÉRMINO'> → ε
+<TÉRMINO> → <FACTOR> <TERMINO_PRIMA>
+<TERMINO_PRIMA> → <*/> <FACTOR> <TERMINO_PRIMA>
+<TERMINO_PRIMA> → ε
 <*/> → *
 <*/> → /
 
 <FACTOR> → ( <EXPRESIÓN> )
-<FACTOR> → <+-_OPT> <CTE_OPT>
+<FACTOR> → id
+<FACTOR> → <CTE>
+<FACTOR> → + <CTE_OPT>
+<FACTOR> → - <CTE_OPT>
 <FACTOR> → <LLAMADA>
-<+-_OPT> → <+->
-<+-_OPT> → ε
 <CTE_OPT> → id
 <CTE_OPT> → <CTE>
 
-<FUNCS> → <TIPO_OPT> id ( <ARG_OPT> ) { <VARS_OPT> <CUERPO> } ;
+<FUNC_HEADER> → <TIPO_OPT> id
+<FUNC_ARGS> → <FUNC_HEADER> ( <ARG_OPT> )
+<FUNCS> → <FUNC_ARGS> { <VARS_OPT> <CUERPO> } ;
 <TIPO_OPT> → nula
 <TIPO_OPT> → <TIPO>
 <ARG_OPT> → <ARG_LIST>
 <ARG_OPT> → ε
-<ARG_LIST> → id : <TIPO> <ARG_LIST’>
-<ARG_LIST’> → , <ARG_LIST>
-<ARG_LIST’> → ε
+<ARG_LIST> → id : <TIPO> <ARG_LIST_PRIMA>
+<ARG_LIST_PRIMA> → , <ARG_LIST>
+<ARG_LIST_PRIMA> → ε
 
-<LLAMADA> → id ( <EXPRESIÓN_OPT> )
+<LLAMADA_HEADER> → id
+<LLAMADA_ARGS> → <LLAMADA_HEADER> ( <EXPRESIÓN_OPT> )
+<LLAMADA> → <LLAMADA_ARGS>
 <EXPRESIÓN_OPT> → <EXPRESIÓN> <EXPRESIÓN_LIST>
 <EXPRESION_OPT> → ε
 <EXPRESIÓN_LIST> → , <EXPRESIÓN> <EXPRESIÓN_LIST>
