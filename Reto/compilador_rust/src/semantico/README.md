@@ -1,13 +1,13 @@
-# Módulo de Análisis Semántico - Lenguaje Patito
+# Módulo de Análisis Semántico
 
 ## Descripción General
 
 Este módulo implementa el análisis semántico completo para el lenguaje Patito, incluyendo:
 
-1. **Cubo Semántico**: Validación de tipos para operaciones
-2. **Tabla de Variables**: Gestión de variables por alcance
-3. **Directorio de Funciones**: Gestión de funciones y sus variables locales
-4. **Contexto Semántico**: Coordinación del análisis durante el parsing
+1. Cubo Semántico: Validación de tipos para operaciones
+2. Tabla de Variables: Gestión de variables por alcance
+3. Directorio de Funciones: Gestión de funciones y sus variables locales
+4. Contexto Semántico: Coordinación del análisis durante el parsing
 
 ## Arquitectura
 
@@ -463,41 +463,25 @@ fn analizar_programa() -> Result<(), String> {
 
 ### Variables
 
-- [x] Variable doblemente declarada (mismo alcance)
-- [x] Variable no declarada (uso antes de declaración)
-- [x] Búsqueda en alcances (local → global)
+- Variable doblemente declarada (mismo alcance)
+- Variable no declarada (uso antes de declaración)
+- Búsqueda en alcances (local a global)
 
 ### Funciones
 
-- [x] Función doblemente declarada
-- [x] Función no declarada (al llamar)
-- [x] Parámetros duplicados
+- Función doblemente declarada
+- Función no declarada (al llamar)
+- Parámetros duplicados
 
 ### Tipos
 
-- [x] Validación de tipos en operaciones aritméticas
-- [x] Validación de tipos en operaciones relacionales
-- [x] Validación de tipos en asignaciones
-- [x] Promoción de tipos (entero → flotante)
-- [x] Rechazo de truncamiento (flotante → entero)
+- Validación de tipos en operaciones aritméticas
+- Validación de tipos en operaciones relacionales
+- Validación de tipos en asignaciones
+- Promoción de tipos (entero a flotante)
+- Rechazo de truncamiento (flotante a entero)
 
 ## Referencias
 
-- **Gramática**: `gramatica.txt`
-- **Documentación Gemini**: Análisis Semántico para Patito
-- **Entrega 1**: Scanner y Parser funcionando
-
-## Próximos Pasos (Futuras Entregas)
-
-**Generación de Código Intermedio**
-
-- Cuádruplos
-
-## Autor
-
-Eduardo Zentella Castillo - A00835387
-
-## Licencia
-
-Proyecto académico - Desarrollo de Aplicaciones Avanzadas (Compiladores)
-Tecnológico de Monterrey - 8vo Semestre
+- Gramática: `gramatica.txt`
+- Material de clase sobre análisis semántico

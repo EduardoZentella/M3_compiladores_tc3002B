@@ -325,26 +325,13 @@ cargo run --bin compilador_rust tests/programas/test_complejo_const.txt
 
 ## Validaciones Implementadas
 
-1. **Validación de Tipos**: Usa el cubo semántico para verificar compatibilidad de tipos
-2. **Variables No Declaradas**: Verifica que las variables existan en el contexto semántico
-3. **Promoción de Tipos**: `entero` → `flotante` en operaciones mixtas
-4. **Asignación Estricta**: `entero = flotante` es error (truncación)
-5. **Paréntesis Balanceados**: Detecta paréntesis sin cerrar
-
----
-
----
+1. Validación de Tipos: Usa el cubo semántico para verificar compatibilidad de tipos
+2. Variables No Declaradas: Verifica que las variables existan en el contexto semántico
+3. Promoción de Tipos: `entero` a `flotante` en operaciones mixtas
+4. Asignación Estricta: `entero = flotante` es error (truncación)
+5. Paréntesis Balanceados: Detecta paréntesis sin cerrar
 
 ## Referencias
 
 - Material de clase: "Semantics of Expressions and Intermediate Code"
 - Gramática de Patito: `gramatica.txt`
-
----
-
-## Autor
-
-Eduardo Zentella Castillo
-Tecnológico de Monterrey
-8vo Semestre - Compiladores (TC3002B)
-**Entrega 3: Generación de Código Intermedio**

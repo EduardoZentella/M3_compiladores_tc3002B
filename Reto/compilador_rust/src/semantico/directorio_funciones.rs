@@ -124,7 +124,7 @@ impl DirectorioFunciones {
         &mut self,
         nombre_funcion: &str,
         nombre_parametro: &str,
-        tipo: crate::semantico::tipos::TipoDato,
+        _tipo: crate::semantico::tipos::TipoDato,
     ) -> Result<(), String> {
         // Buscar la función
         let funcion = self.funciones.get_mut(nombre_funcion)

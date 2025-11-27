@@ -30,6 +30,10 @@ pub fn analyze(tokens: &[Token], nivel_verbose: usize) -> Result<GeneradorCuadru
     // Establecer contexto en el generador
     generador.establecer_contexto(&contexto);
 
+    // Generar GOTO al inicio del programa principal (saltar funciones)
+    // Este GOTO se hará FILL cuando se encuentre el token 'inicio'
+    generador.generar_goto_inicio()?;
+
     // Pila semántica para tracking de atributos
     let mut pila_semantica: Vec<String> = Vec::new();
 
@@ -73,8 +77,16 @@ pub fn analyze(tokens: &[Token], nivel_verbose: usize) -> Result<GeneradorCuadru
                 if cursor < tokens.len() {
                     pila_semantica.push(tokens[cursor].valor.clone());
 
-                    // Detectar inicio de condición: si ( o mientras (
+                    // Detectar token 'inicio': hacer FILL del GOTO al main
                     let token_actual = &tokens[cursor].tipo;
+                    if matches!(token_actual, crate::lexico::token::TipoToken::Inicio) {
+                        if nivel_verbose >= 2 {
+                            println!("[PARSER] Detectado 'inicio' - haciendo FILL de GOTO al main");
+                        }
+                        generador.fill_goto_inicio()?;
+                    }
+
+                    // Detectar inicio de condición: si ( o mientras (
                     if matches!(token_actual, crate::lexico::token::TipoToken::Si) {
                         if cursor + 1 < tokens.len() &&
                            matches!(tokens[cursor + 1].tipo, crate::lexico::token::TipoToken::ParenAbre) {

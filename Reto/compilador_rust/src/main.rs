@@ -33,7 +33,6 @@
 // Usar módulos de la biblioteca
 use compilador_rust::lexico;
 use compilador_rust::sintactico;
-use compilador_rust::intermedio::GeneradorCuadruplos;
 use compilador_rust::vm::{MaquinaVirtual, ConsolaIO};
 
 /// Obtiene la ruta del archivo a compilar y determina el nivel de verbose.

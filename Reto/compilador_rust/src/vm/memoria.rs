@@ -6,13 +6,14 @@
 use std::collections::HashMap;
 
 /// Rangos de direcciones virtuales
+/// Deben coincidir con los rangos en memoria_virtual.rs del generador
 pub const GLOBAL_INICIO: usize = 1000;
-pub const GLOBAL_FIN: usize = 4999;
-pub const LOCAL_INICIO: usize = 5000;
-pub const LOCAL_FIN: usize = 9999;
-pub const TEMPORAL_INICIO: usize = 10000;
-pub const TEMPORAL_FIN: usize = 14999;
-pub const CONSTANTE_INICIO: usize = 15000;
+pub const GLOBAL_FIN: usize = 6999;
+pub const LOCAL_INICIO: usize = 7000;
+pub const LOCAL_FIN: usize = 12999;
+pub const TEMPORAL_INICIO: usize = 13000;
+pub const TEMPORAL_FIN: usize = 18999;
+pub const CONSTANTE_INICIO: usize = 19000;
 pub const CONSTANTE_FIN: usize = 24999;
 
 /// Valor en la VM (entero o flotante)

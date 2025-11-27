@@ -347,15 +347,13 @@ impl MaquinaVirtual {
     fn ejecutar_parametro(&mut self, cuad: &Cuadruplo) -> Result<(), String> {
         let valor = self.leer_operando(&cuad.operando_izq)?;
 
-        let param_num = match &cuad.operando_der {
+        let param_num = match &cuad.resultado {
             Operando::ConstanteEntera(n) => *n as usize,
-            _ => return Err("Parametro requiere número de parámetro como operando_der".to_string()),
+            _ => return Err("Parametro requiere número de parámetro en resultado".to_string()),
         };
 
         // Agregarlo al marco temporal
         if let Some(ref mut marco) = self.marco_temporal {
-            marco.agregar_parametro(valor);
-
             // Escribir en la dirección local correspondiente del marco temporal
             let offset = param_num;
             marco.memoria_local.escribir_valor(offset, valor);
@@ -378,6 +376,13 @@ impl MaquinaVirtual {
             .ok_or_else(|| format!("Función '{}' no encontrada", nombre_funcion))?
             .clone();
 
+        // Guardar si hay destino para valor de retorno
+        let destino_retorno = if !matches!(cuad.resultado, Operando::Vacio) {
+            Some(cuad.resultado.clone())
+        } else {
+            None
+        };
+
         // Tomar el marco temporal y pushearlo a la pila
         let marco = self.marco_temporal.take()
             .ok_or("No hay marco temporal (falta Era antes de GoSub)")?;
@@ -385,7 +390,34 @@ impl MaquinaVirtual {
         self.pila_marcos.push(marco);
 
         // Saltar a la dirección de inicio de la función
+        let ip_retorno = self.ip + 1;
         self.ip = info.direccion_inicio;
+
+        // Ejecutar hasta encontrar ENDFUNC o RETURN
+        while self.ip < self.cuadruplos.len() {
+            let cuad_actual = &self.cuadruplos[self.ip].clone();
+
+            // Si es ENDFUNC, salir del loop
+            if matches!(cuad_actual.operador, OperadorCuadruplo::EndFunc) {
+                break;
+            }
+
+            self.ejecutar_cuadruplo(cuad_actual)?;
+            self.ip += 1;
+        }
+
+        // Pop el marco de la función
+        let marco_funcion = self.pila_marcos.pop()
+            .ok_or("No hay marco para hacer pop después de GOSUB")?;
+
+        // Si hay valor de retorno y destino, copiarlo
+        if let (Some(destino), Some(valor)) = (destino_retorno, marco_funcion.valor_retorno) {
+            let destino_dir = self.extraer_direccion(&destino)?;
+            self.escribir_memoria(destino_dir, valor)?;
+        }
+
+        // Restaurar IP
+        self.ip = ip_retorno;
         self.ip -= 1; // Compensar incremento automático
 
         Ok(())
@@ -409,18 +441,20 @@ impl MaquinaVirtual {
         Ok(())
     }
 
-    /// Ejecuta RETURN: guarda valor de retorno en la función actual
+    /// Ejecuta RETURN: guarda valor de retorno para que el llamador lo use
     fn ejecutar_return(&mut self, cuad: &Cuadruplo) -> Result<(), String> {
-        let valor = self.leer_operando(&cuad.operando_izq)?;
-        let destino_dir = self.extraer_direccion(&cuad.resultado)?;
+        // Si hay un operando, es el temporal con el valor de retorno
+        if !matches!(cuad.operando_izq, Operando::Vacio) {
+            let valor = self.leer_operando(&cuad.operando_izq)?;
 
-        // Guardarlo en el marco actual
-        if let Some(marco) = self.pila_marcos.last_mut() {
-            marco.valor_retorno = Some(valor.clone());
+            // Guardar en el marco actual para que GOSUB lo recupere
+            if let Some(marco) = self.pila_marcos.last_mut() {
+                marco.valor_retorno = Some(valor);
+            }
         }
 
-        // También escribirlo en la dirección de destino (global/temporal)
-        self.escribir_memoria(destino_dir, valor)?;
+        // El RETURN no cambia el IP, solo marca que hay un valor
+        // El pop del marco lo hace ENDFUNC
 
         Ok(())
     }

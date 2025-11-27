@@ -10,8 +10,8 @@
 //! - **Quad**: Cola de cuádruplos generados
 //! - **Pjumps**: Pila de saltos pendientes
 
-use crate::intermedio::{Cuadruplo, OperadorCuadruplo, memoria::GestorMemoria};
-use crate::intermedio::memoria_virtual::MemoriaVirtual;
+use crate::intermedio::{Cuadruplo, OperadorCuadruplo};
+use crate::intermedio::memoria_virtual::{MemoriaVirtual, TipoSegmento};
 use crate::semantico::{CuboSemantico, TipoDato, ContextoSemantico};
 use crate::intermedio::cuadruplo::Operando;
 use std::collections::{VecDeque, HashMap};
@@ -49,10 +49,7 @@ pub struct GeneradorCuadruplos {
     en_condicion: usize,
 
     // Gestión de memoria
-    /// Gestor de variables temporales
-    gestor_memoria: GestorMemoria,
-
-    /// Sistema de memoria virtual (direcciones 1000-24999)
+    /// Sistema de memoria virtual (direcciones 1000-24999) - maneja variables, temporales y constantes
     memoria_virtual: MemoriaVirtual,
 
     // Validación semántica
@@ -72,6 +69,12 @@ pub struct GeneradorCuadruplos {
 
     /// Tabla de strings literales (para letreros)
     tabla_strings: Vec<String>,
+
+    /// Contador de parámetros durante llamada a función
+    contador_parametros: usize,
+
+    /// Nombre de función siendo llamada (para tracking de params)
+    funcion_llamada_actual: Option<String>,
 }
 
 impl GeneradorCuadruplos {
@@ -84,13 +87,14 @@ impl GeneradorCuadruplos {
             quad: VecDeque::new(),
             pjumps: Vec::new(),
             en_condicion: 0,
-            gestor_memoria: GestorMemoria::new(),
             memoria_virtual: MemoriaVirtual::new(),
             cubo_semantico: CuboSemantico::new(),
             contexto: None,
             metadatos_funciones: HashMap::new(),
             funcion_actual: None,
             tabla_strings: Vec::new(),
+            contador_parametros: 0,
+            funcion_llamada_actual: None,
         }
     }
 
@@ -125,13 +129,17 @@ impl GeneradorCuadruplos {
 
         // Si es un número (constante)
         if let Ok(valor_entero) = nombre.parse::<i32>() {
-            self.pilao.push(Operando::ConstanteEntera(valor_entero));
+            // Crear constante en memoria y obtener su dirección
+            let direccion = self.memoria_virtual.asignar_constante_entera(valor_entero)?;
+            self.pilao.push(Operando::Direccion(direccion));
             self.ptypes.push(TipoDato::Entero);
             return Ok(());
         }
 
         if let Ok(valor_flotante) = nombre.parse::<f64>() {
-            self.pilao.push(Operando::ConstanteFlotante(valor_flotante));
+            // Crear constante en memoria y obtener su dirección
+            let direccion = self.memoria_virtual.asignar_constante_flotante(valor_flotante)?;
+            self.pilao.push(Operando::Direccion(direccion));
             self.ptypes.push(TipoDato::Flotante);
             return Ok(());
         }
@@ -234,8 +242,8 @@ impl GeneradorCuadruplos {
                 ));
             }
         };        // result = AVAIL.next()
-        let num_temporal = self.gestor_memoria.siguiente_temporal(tipo_resultado);
-        let resultado = Operando::Temporal(num_temporal);
+        let dir_temporal = self.memoria_virtual.asignar_variable(tipo_resultado, TipoSegmento::Temporal)?;
+        let resultado = Operando::Direccion(dir_temporal);
 
         // generate quad = (operator, left_operand, right_operand, result)
         let cuadruplo = Cuadruplo::new(
@@ -413,7 +421,44 @@ impl GeneradorCuadruplos {
         Ok(())
     }
 
-    // ==================== ESTRUCTURAS DE CONTROL ====================
+    /// Generar GOTO inicial al programa principal (saltar funciones)
+    pub fn generar_goto_inicio(&mut self) -> Result<(), String> {
+        // Generar cuádruplo GOTO con salto pendiente
+        let cuadruplo = Cuadruplo::new(
+            OperadorCuadruplo::Goto,
+            Operando::Vacio,
+            Operando::Vacio,
+            Operando::Pendiente,
+        );
+
+        self.quad.push_back(cuadruplo);
+
+        // Guardar la posición del cuádruplo para FILL posterior
+        let pos_salto = self.quad.len() - 1;
+        self.pjumps.push(pos_salto);
+
+        Ok(())
+    }
+
+    /// FILL del GOTO inicial (cuando se encuentra el 'inicio' del main)
+    pub fn fill_goto_inicio(&mut self) -> Result<(), String> {
+        let pos_salto = self.pjumps.pop()
+            .ok_or("Error: No hay GOTO inicial pendiente para rellenar")?;
+
+        // La dirección de salto es la posición actual (siguiente cuádruplo)
+        let direccion_salto = self.quad.len();
+
+        // Actualizar el cuádruplo con la dirección correcta
+        if let Some(cuadruplo) = self.quad.get_mut(pos_salto) {
+            cuadruplo.resultado = Operando::Etiqueta(direccion_salto);
+        } else {
+            return Err(format!("Error: Posición de salto {} inválida", pos_salto));
+        }
+
+        Ok(())
+    }
+
+    // ==================== ESTRUCTURAS DE CONTROL ======================================
 
     /// Marcar que estamos entrando en una expresión condicional (si, mientras)
     pub fn iniciar_condicion(&mut self) {
@@ -633,8 +678,9 @@ impl GeneradorCuadruplos {
         let contexto = self.obtener_contexto()?;
         contexto.verificar_funcion_existe(nombre_func)?;
 
-        // Guardar el nombre de la función para usarlo en generar_gosub
-        self.pilao.push(Operando::Variable(nombre_func.to_string()));
+        // Inicializar tracking de parámetros
+        self.contador_parametros = 0;
+        self.funcion_llamada_actual = Some(nombre_func.to_string());
 
         Ok(())
     }
@@ -660,10 +706,14 @@ impl GeneradorCuadruplos {
 
     /// Paso 3-4: Generar PARAM
     /// Se invoca cuando se procesa cada expresión en la lista de argumentos
-    pub fn generar_param(&mut self, num_param: usize) -> Result<(), String> {
+    pub fn generar_param(&mut self) -> Result<(), String> {
         let operando = self.pilao.pop()
             .ok_or("Error: No hay parámetro para pasar")?;
         self.ptypes.pop();
+
+        // Usar contador actual y luego incrementar
+        let num_param = self.contador_parametros;
+        self.contador_parametros += 1;
 
         // Generar cuádruplo: (param, argumento, -, num_param)
         let cuadruplo = Cuadruplo::new(
@@ -688,37 +738,42 @@ impl GeneradorCuadruplos {
             contexto.obtener_tipo_retorno_funcion(nombre_func).ok()
         };
 
-        // Usar el nombre de la función como operando
-        let cuadruplo = Cuadruplo::new(
-            OperadorCuadruplo::GoSub,
-            Operando::Variable(nombre_func.to_string()),
-            Operando::Vacio,
-            Operando::Vacio,
-        );
+        // Si la función tiene retorno, crear temporal ANTES del GOSUB
+        let resultado_opt = if let Some(tipo_retorno) = tipo_retorno_opt {
+            let dir_temporal = self.memoria_virtual.asignar_variable(tipo_retorno, TipoSegmento::Temporal)?;
+            Some((Operando::Direccion(dir_temporal), tipo_retorno))
+        } else {
+            None
+        };
+
+        // Generar GOSUB con temporal de destino si hay retorno
+        let cuadruplo = if let Some((ref resultado, _)) = resultado_opt {
+            Cuadruplo::new(
+                OperadorCuadruplo::GoSub,
+                Operando::Variable(nombre_func.to_string()),
+                Operando::Vacio,
+                resultado.clone(),
+            )
+        } else {
+            Cuadruplo::new(
+                OperadorCuadruplo::GoSub,
+                Operando::Variable(nombre_func.to_string()),
+                Operando::Vacio,
+                Operando::Vacio,
+            )
+        };
 
         self.quad.push_back(cuadruplo);
 
-        // Si la función tiene retorno, generar temporal para el resultado
-        if let Some(tipo_retorno) = tipo_retorno_opt {
-            // La función tiene retorno (no es Nula)
-            let num_temporal = self.gestor_memoria.siguiente_temporal(tipo_retorno);
-            let resultado = Operando::Temporal(num_temporal);
-
-            // Generar cuádruplo: (=, RET, -, temp)
-            let cuadruplo_ret = Cuadruplo::new(
-                OperadorCuadruplo::Asignacion,
-                Operando::Variable("RET".to_string()),
-                Operando::Vacio,
-                resultado.clone(),
-            );
-
-            self.quad.push_back(cuadruplo_ret);
-
-            // Pushear el temporal a la pila de operandos
+        // Si hay retorno, pushear el temporal a la pila
+        if let Some((resultado, tipo_retorno)) = resultado_opt {
             self.pilao.push(resultado);
             self.ptypes.push(tipo_retorno);
         }
-        // Si es None, la función es Nula (void) - no hacer nada
+
+        // Resetear tracking de parámetros
+        self.contador_parametros = 0;
+        self.funcion_llamada_actual = None;
 
         Ok(())
     }
@@ -742,23 +797,28 @@ impl GeneradorCuadruplos {
     pub fn generar_return(&mut self) -> Result<(), String> {
         let operando = self.pilao.pop()
             .ok_or("Error: No hay valor de retorno")?;
-        let _tipo = self.ptypes.pop();
+        let tipo = self.ptypes.pop()
+            .ok_or("Error: No hay tipo para valor de retorno")?;
 
-        // Generar cuádruplo: (=, expresión, -, RET)
+        // Crear un temporal para el valor de retorno
+        let dir_temporal = self.memoria_virtual.asignar_variable(tipo, TipoSegmento::Temporal)?;
+        let resultado = Operando::Direccion(dir_temporal);
+
+        // Generar cuádruplo: (=, expresión, -, temp_retorno)
         let cuadruplo = Cuadruplo::new(
             OperadorCuadruplo::Asignacion,
             operando.clone(),
             Operando::Vacio,
-            Operando::Variable("RET".to_string()),
+            resultado.clone(),
         );
 
         self.quad.push_back(cuadruplo);
         self.liberar_si_temporal(&operando);
 
-        // Generar RETURN
+        // Generar RETURN con el temporal como operando
         let cuadruplo_return = Cuadruplo::new(
             OperadorCuadruplo::Return,
-            Operando::Vacio,
+            resultado,
             Operando::Vacio,
             Operando::Vacio,
         );
@@ -772,8 +832,8 @@ impl GeneradorCuadruplos {
 
     /// Libera un temporal si el operando es temporal
     fn liberar_si_temporal(&mut self, operando: &Operando) {
-        if let Operando::Temporal(num) = operando {
-            self.gestor_memoria.liberar_temporal(*num);
+        if let Operando::Direccion(dir) = operando {
+            self.memoria_virtual.liberar_temporal(*dir);
         }
     }
 
@@ -825,7 +885,7 @@ impl GeneradorCuadruplos {
         }
 
         println!("\n  Total de cuádruplos: {}", self.quad.len());
-        println!("  Temporales usados: {}\n", self.gestor_memoria.total_temporales());
+        println!("  {}", self.memoria_virtual.obtener_estadisticas());
     }
 
     /// Reinicia el generador (limpia todas las estructuras)
@@ -835,7 +895,7 @@ impl GeneradorCuadruplos {
         self.ptypes.clear();
         self.quad.clear();
         self.pjumps.clear();
-        self.gestor_memoria.reiniciar();
+        self.memoria_virtual.reiniciar();
     }
 
     /// Obtiene el estado de las pilas (para debugging)
@@ -893,46 +953,25 @@ impl GeneradorCuadruplos {
             }
         }
 
-        // Construir mapa de constantes escaneando cuádruplos
+        // Construir mapa de constantes desde memoria_virtual
         let mut mapa_constantes = HashMap::new();
-        let mut siguiente_dir_constante = 15000; // Segmento de constantes empieza en 15000
+        let (tabla_enteros, tabla_flotantes, tabla_chars) = self.memoria_virtual.obtener_tablas_constantes();
 
-        for cuadruplo in &self.quad {
-            // Función auxiliar para agregar constante si no existe
-            let mut agregar_constante = |valor: Valor| {
-                // Verificar si ya existe
-                let existe = mapa_constantes.values().any(|v| match (v, &valor) {
-                    (Valor::Entero(a), Valor::Entero(b)) => a == b,
-                    (Valor::Flotante(a), Valor::Flotante(b)) => (a - b).abs() < f64::EPSILON,
-                    _ => false,
-                });
+        // Agregar constantes enteras
+        for (valor, direccion) in tabla_enteros {
+            mapa_constantes.insert(direccion, Valor::Entero(valor));
+        }
 
-                if !existe {
-                    mapa_constantes.insert(siguiente_dir_constante, valor);
-                    siguiente_dir_constante += 1;
-                }
-            };
-
-            // Revisar operando izquierdo
-            match &cuadruplo.operando_izq {
-                Operando::ConstanteEntera(v) => agregar_constante(Valor::Entero(*v)),
-                Operando::ConstanteFlotante(v) => agregar_constante(Valor::Flotante(*v)),
-                _ => {}
+        // Agregar constantes flotantes
+        for (valor_str, direccion) in tabla_flotantes {
+            if let Ok(valor) = valor_str.parse::<f64>() {
+                mapa_constantes.insert(direccion, Valor::Flotante(valor));
             }
+        }
 
-            // Revisar operando derecho
-            match &cuadruplo.operando_der {
-                Operando::ConstanteEntera(v) => agregar_constante(Valor::Entero(*v)),
-                Operando::ConstanteFlotante(v) => agregar_constante(Valor::Flotante(*v)),
-                _ => {}
-            }
-
-            // Revisar resultado (puede tener constantes en casos especiales)
-            match &cuadruplo.resultado {
-                Operando::ConstanteEntera(v) => agregar_constante(Valor::Entero(*v)),
-                Operando::ConstanteFlotante(v) => agregar_constante(Valor::Flotante(*v)),
-                _ => {}
-            }
+        // Agregar constantes char (almacenadas como entero)
+        for (valor, direccion) in tabla_chars {
+            mapa_constantes.insert(direccion, Valor::Entero(valor as i32));
         }
 
         // Crear programa objeto

@@ -2,31 +2,27 @@ programa test_suma_funcion;
 
 entero suma(a : entero, b : entero) {
     vars resultado : entero;
-    {
-        resultado = a + b;
-    }
+    resultado = a + b;
+    regresa resultado;
 };
 
 entero multiplicar(x : entero, y : entero) {
     vars res : entero;
-    {
-        res = x * y;
-    }
+    res = x * y;
+    regresa res;
 };
 
 inicio {
     vars num1, num2, total : entero;
-    {
-        num1 = 15;
-        num2 = 25;
+    num1 = 15;
+    num2 = 25;
 
-        total = suma(num1, num2);
-        escribe("Suma:");
-        escribe(total);
+    total = suma(num1, num2);
+    escribe("Suma:");
+    escribe(total);
 
-        total = multiplicar(num1, num2);
-        escribe("Multiplicacion:");
-        escribe(total);
-    }
+    total = multiplicar(num1, num2);
+    escribe("Multiplicacion:");
+    escribe(total);
 }
 fin

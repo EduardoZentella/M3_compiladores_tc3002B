@@ -29,7 +29,7 @@
 //! ```
 
 use crate::semantico::TipoDato;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 // Límites de direcciones para cada segmento y tipo
 const GLOBAL_ENTERO_INICIO: usize = 1000;
@@ -92,6 +92,11 @@ pub struct MemoriaVirtual {
     tabla_constantes_entero: HashMap<i32, usize>,
     tabla_constantes_flotante: HashMap<String, usize>, // String para evitar problemas de precisión
     tabla_constantes_char: HashMap<char, usize>,
+
+    // Pools de temporales disponibles para reutilización
+    temporales_disponibles_entero: HashSet<usize>,
+    temporales_disponibles_flotante: HashSet<usize>,
+    temporales_disponibles_char: HashSet<usize>,
 }
 
 impl MemoriaVirtual {
@@ -117,6 +122,10 @@ impl MemoriaVirtual {
             tabla_constantes_entero: HashMap::new(),
             tabla_constantes_flotante: HashMap::new(),
             tabla_constantes_char: HashMap::new(),
+
+            temporales_disponibles_entero: HashSet::new(),
+            temporales_disponibles_flotante: HashSet::new(),
+            temporales_disponibles_char: HashSet::new(),
         }
     }
 
@@ -191,8 +200,14 @@ impl MemoriaVirtual {
                 Ok(dir)
             }
 
-            // Segmento Temporal
+            // Segmento Temporal (con pool de reutilización)
             (TipoSegmento::Temporal, TipoDato::Entero) => {
+                // Intentar reutilizar una dirección del pool
+                if let Some(&dir) = self.temporales_disponibles_entero.iter().next() {
+                    self.temporales_disponibles_entero.remove(&dir);
+                    return Ok(dir);
+                }
+                // Si no hay disponibles, asignar nueva
                 if self.temporal_entero > TEMPORAL_ENTERO_FIN {
                     return Err("Error: Desbordamiento de memoria temporal para enteros".to_string());
                 }
@@ -201,6 +216,12 @@ impl MemoriaVirtual {
                 Ok(dir)
             }
             (TipoSegmento::Temporal, TipoDato::Flotante) => {
+                // Intentar reutilizar una dirección del pool
+                if let Some(&dir) = self.temporales_disponibles_flotante.iter().next() {
+                    self.temporales_disponibles_flotante.remove(&dir);
+                    return Ok(dir);
+                }
+                // Si no hay disponibles, asignar nueva
                 if self.temporal_flotante > TEMPORAL_FLOTANTE_FIN {
                     return Err("Error: Desbordamiento de memoria temporal para flotantes".to_string());
                 }
@@ -209,6 +230,12 @@ impl MemoriaVirtual {
                 Ok(dir)
             }
             (TipoSegmento::Temporal, TipoDato::Char) => {
+                // Intentar reutilizar una dirección del pool
+                if let Some(&dir) = self.temporales_disponibles_char.iter().next() {
+                    self.temporales_disponibles_char.remove(&dir);
+                    return Ok(dir);
+                }
+                // Si no hay disponibles, asignar nueva
                 if self.temporal_char > TEMPORAL_CHAR_FIN {
                     return Err("Error: Desbordamiento de memoria temporal para chars".to_string());
                 }
@@ -304,6 +331,72 @@ impl MemoriaVirtual {
             self.tabla_constantes_entero.clone(),
             self.tabla_constantes_flotante.clone(),
             self.tabla_constantes_char.clone(),
+        )
+    }
+
+    /// Libera una dirección temporal para que pueda ser reutilizada (pool AVAIL)
+    pub fn liberar_temporal(&mut self, direccion: usize) {
+        // Determinar el tipo basándose en el rango de direcciones
+        if direccion >= TEMPORAL_ENTERO_INICIO && direccion <= TEMPORAL_ENTERO_FIN {
+            self.temporales_disponibles_entero.insert(direccion);
+        } else if direccion >= TEMPORAL_FLOTANTE_INICIO && direccion <= TEMPORAL_FLOTANTE_FIN {
+            self.temporales_disponibles_flotante.insert(direccion);
+        } else if direccion >= TEMPORAL_CHAR_INICIO && direccion <= TEMPORAL_CHAR_FIN {
+            self.temporales_disponibles_char.insert(direccion);
+        }
+        // Si no es temporal, no hacer nada (silencioso para simplificar uso)
+    }
+
+    /// Reinicia completamente el gestor de memoria (limpia contadores, pools y tablas)
+    pub fn reiniciar(&mut self) {
+        // Reiniciar contadores globales
+        self.global_entero = GLOBAL_ENTERO_INICIO;
+        self.global_flotante = GLOBAL_FLOTANTE_INICIO;
+        self.global_char = GLOBAL_CHAR_INICIO;
+
+        // Reiniciar contadores locales
+        self.local_entero = LOCAL_ENTERO_INICIO;
+        self.local_flotante = LOCAL_FLOTANTE_INICIO;
+        self.local_char = LOCAL_CHAR_INICIO;
+
+        // Reiniciar contadores temporales
+        self.temporal_entero = TEMPORAL_ENTERO_INICIO;
+        self.temporal_flotante = TEMPORAL_FLOTANTE_INICIO;
+        self.temporal_char = TEMPORAL_CHAR_INICIO;
+
+        // Limpiar pools de temporales disponibles
+        self.temporales_disponibles_entero.clear();
+        self.temporales_disponibles_flotante.clear();
+        self.temporales_disponibles_char.clear();
+
+        // Reiniciar contadores de constantes
+        self.constante_entero = CONSTANTE_ENTERO_INICIO;
+        self.constante_flotante = CONSTANTE_FLOTANTE_INICIO;
+        self.constante_char = CONSTANTE_CHAR_INICIO;
+
+        // Limpiar tablas de constantes
+        self.tabla_constantes_entero.clear();
+        self.tabla_constantes_flotante.clear();
+        self.tabla_constantes_char.clear();
+    }
+
+    /// Retorna estadísticas de uso de memoria
+    pub fn obtener_estadisticas(&self) -> String {
+        let temporales_usados_e = self.temporal_entero - TEMPORAL_ENTERO_INICIO;
+        let temporales_usados_f = self.temporal_flotante - TEMPORAL_FLOTANTE_INICIO;
+        let temporales_usados_c = self.temporal_char - TEMPORAL_CHAR_INICIO;
+
+        format!(
+            "Memoria Virtual - Temporales: E={} F={} C={} | Pool Disponible: E={} F={} C={} | Constantes: E={} F={} C={}",
+            temporales_usados_e,
+            temporales_usados_f,
+            temporales_usados_c,
+            self.temporales_disponibles_entero.len(),
+            self.temporales_disponibles_flotante.len(),
+            self.temporales_disponibles_char.len(),
+            self.tabla_constantes_entero.len(),
+            self.tabla_constantes_flotante.len(),
+            self.tabla_constantes_char.len(),
         )
     }
 

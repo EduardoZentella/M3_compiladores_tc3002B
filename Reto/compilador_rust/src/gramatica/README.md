@@ -1,10 +1,10 @@
 # Módulo de Gramática
 
-## 📋 Descripción
+## Descripción
 
 Este módulo contiene todas las funcionalidades relacionadas con el análisis y procesamiento de gramáticas libres de contexto. Incluye el parseo de gramáticas, cálculo de conjuntos FIRST y FOLLOW, y construcción del autómata LR(0).
 
-## 📁 Archivos
+## Archivos
 
 ### `mod.rs`
 
@@ -93,7 +93,7 @@ Construye el autómata LR(0) necesario para el análisis sintáctico SLR.
 - Lista de estados (conjuntos de ítems)
 - Mapa de transiciones: (estado, símbolo) → nuevo_estado
 
-## 🔄 Flujo de Procesamiento
+## Flujo de Procesamiento
 
 ```
 gramatica.txt
@@ -107,7 +107,7 @@ gramatica.txt
   [Usado por generador_slr para crear tablas]
 ```
 
-## 💡 Conceptos Clave
+## Conceptos Clave
 
 ### Gramática Libre de Contexto
 
@@ -141,7 +141,7 @@ Calcula el siguiente estado al leer un símbolo:
 
 - `goto(I, X)` = clausura de ítems `A → αX • β` donde `A → α • X β` está en I
 
-## 🧪 Ejemplo de Uso
+## Ejemplo de Uso
 
 ```rust
 use compilador_rust::gramatica::parser::parsear_gramatica;
@@ -161,13 +161,13 @@ println!("Estados: {}", estados.len());
 println!("Transiciones: {}", transiciones.len());
 ```
 
-## 📊 Complejidad
+## Complejidad
 
 - **Parseo**: O(n) donde n = número de líneas en el archivo
 - **FIRST/FOLLOW**: O(|N| × |P|²) en el peor caso
 - **Autómata LR(0)**: O(|P| × |G|) donde G es el tamaño de la gramática
 
-## 🐛 Manejo de Errores
+## Manejo de Errores
 
 El módulo detecta y reporta:
 
@@ -175,7 +175,7 @@ El módulo detecta y reporta:
 - Símbolos no definidos
 - Gramáticas ambiguas o con conflictos (en construcción del autómata)
 
-## 🔗 Referencias
+## Referencias
 
 - Dragon Book, Capítulo 4: Syntax Analysis
 - Engineering a Compiler, Sección sobre LR Parsing

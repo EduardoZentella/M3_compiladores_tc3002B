@@ -43,6 +43,10 @@ pub fn ejecutar_accion_semantica(
 
         // ==================== PROGRAMA ====================
 
+        // Al inicio: programa id ;
+        // Necesitamos generar GOTO al main antes de procesar funciones
+        // Esto se hace en una reducción temprana, no en <Programa> completo
+        
         ("<Programa>", 8) => {
             // programa id ; <VARS_OPT> <FUNCS_LIST> inicio <CUERPO> fin
             if nivel_verbose >= 2 {
@@ -219,14 +223,14 @@ pub fn ejecutar_accion_semantica(
             Ok(nombre_func.clone())
         }
 
-        // <FUNCS> → <FUNC_ARGS> { <VARS_OPT> <CUERPO> } ;
-        ("<FUNCS>", 6) => {
+        // <FUNCS> → <FUNC_ARGS> <CUERPO> ;
+        ("<FUNCS>", 3) => {
             // Al reducir FUNCS completa, generamos ENDFUNC y salimos del ámbito
             if nivel_verbose >= 2 {
                 println!("[SEMANTICA] FUNCS completa: generando ENDFUNC y saliendo de ámbito");
             }
 
-            generador.finalizar_funcion()?;
+            generador.generar_endfunc()?;
             contexto.salir_ambito_funcion()?;
 
             Ok(String::new())
@@ -253,6 +257,7 @@ pub fn ejecutar_accion_semantica(
                 println!("[SEMANTICA] LLAMADA_HEADER: verificando función '{}'", nombre_func);
             }
             generador.iniciar_llamada(nombre_func)?;
+            generador.generar_era(nombre_func)?;
             Ok(nombre_func.clone())
         }
 
@@ -383,7 +388,10 @@ pub fn ejecutar_accion_semantica(
         }
 
         // <FACTOR> → id
-        ("<FACTOR>", 1) if atributos.get(0).map(|s| !s.is_empty() && !s.starts_with('+') && !s.starts_with('-') && s.chars().next().unwrap().is_alphabetic()) == Some(true) => {
+        ("<FACTOR>", 1) if atributos.get(0).map(|s| {
+            let first_opt = s.chars().next();
+            !s.is_empty() && !s.starts_with('+') && !s.starts_with('-') && first_opt.map(|c| c.is_alphabetic()).unwrap_or(false)
+        }) == Some(true) => {
             let operando = &atributos[0];
             if nivel_verbose >= 3 {
                 println!("[SEMANTICA] Procesando operando id: '{}'", operando);
@@ -393,7 +401,7 @@ pub fn ejecutar_accion_semantica(
         }
 
         // <FACTOR> → <CTE>
-        ("<FACTOR>", 1) if atributos.get(0).map(|s| s.chars().next().unwrap().is_numeric()) == Some(true) => {
+        ("<FACTOR>", 1) if atributos.get(0).map(|s| s.chars().next().map(|c| c.is_numeric()).unwrap_or(false)) == Some(true) => {
             let operando = &atributos[0];
             if nivel_verbose >= 3 {
                 println!("[SEMANTICA] Procesando operando <CTE>: '{}'", operando);
@@ -500,6 +508,26 @@ pub fn ejecutar_accion_semantica(
 
         // ==================== PROPAGACIÓN ESTRUCTURAL ====================
 
+        // <EXPRESIÓN_OPT> → <EXPRESIÓN> <EXPRESIÓN_LIST>
+        ("<EXPRESIÓN_OPT>", 2) => {
+            // Generar PARAM para este argumento
+            if nivel_verbose >= 3 {
+                println!("[SEMANTICA] Generando PARAM para argumento");
+            }
+            generador.generar_param()?;
+            Ok(String::new())
+        }
+
+        // <EXPRESIÓN_LIST> → , <EXPRESIÓN> <EXPRESIÓN_LIST>
+        ("<EXPRESIÓN_LIST>", 3) => {
+            // Generar PARAM para este argumento adicional
+            if nivel_verbose >= 3 {
+                println!("[SEMANTICA] Generando PARAM para argumento adicional");
+            }
+            generador.generar_param()?;
+            Ok(String::new())
+        }
+
         ("<EXPRESIÓN>", 2) |
         ("<EXP>", 2) |
         ("<TÉRMINO>", 2) |
@@ -512,8 +540,6 @@ pub fn ejecutar_accion_semantica(
         ("<ARG_LIST>", _) |
         ("<ARG_LIST_PRIMA>", _) |
         ("<TIPO_OPT>", _) |
-        ("<EXPRESIÓN_OPT>", _) |
-        ("<EXPRESIÓN_LIST>", _) |
         ("<EXPRESIÓN_LIST_PRIMA>", _) |
         ("<IMPRIME_LIST>", _) => {
             // Propagación: pasar primer atributo no vacío

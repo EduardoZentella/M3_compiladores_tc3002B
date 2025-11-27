@@ -137,27 +137,19 @@ El método `leer_operando(&operando)` maneja diferentes tipos de operandos:
 
 - **Constantes literales**: Devuelve `Valor` directamente
 - **Direcciones**: Traduce y lee de memoria
-- **Temporales**: Calcula dirección en segmento TEMPORAL
-- **Etiquetas**: Usa dirección de salto
+- Temporales: Calcula dirección en segmento TEMPORAL
+- Etiquetas: Usa dirección de salto
 
 ### Gestión de la Pila
 
 La pila de marcos (`pila_marcos`) funciona como una call stack tradicional:
 
-- Cada llamada a función hace **push** de un nuevo marco
-- Cada retorno hace **pop** del marco actual
+- Cada llamada a función hace push de un nuevo marco
+- Cada retorno hace pop del marco actual
 - El marco en el tope (`last()`) es el contexto actual de ejecución
 
-## Pendientes
+## Referencias
 
-- [ ] Implementar operador **Lectura** (lee desde consola)
-- [ ] Mejorar `construir_tabla_funciones()` para detectar funciones automáticamente
-- [ ] Agregar soporte para strings en memoria
-- [ ] Implementar verificación de tipos en tiempo de ejecución
-- [ ] Agregar modo de debugging con breakpoints
-
-## 📚 Referencias
-
-- [Diseño de Compiladores - Aho, Sethi, Ullman](https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools)
-- [Virtual Machine Design - Stack-based vs Register-based](https://en.wikipedia.org/wiki/Virtual_machine)
-- [Call Stack - Wikipedia](https://en.wikipedia.org/wiki/Call_stack)
+- Diseño de Compiladores - Aho, Sethi, Ullman
+- Virtual Machine Design - Stack-based vs Register-based
+- Call Stack

@@ -1,10 +1,10 @@
 # Directorio de Ejecutables (bin/)
 
-## 📋 Descripción
+## Descripción
 
 Este directorio contiene programas ejecutables independientes para probar, validar y generar componentes del compilador. Cada archivo es un binario independiente que se puede ejecutar con `cargo run --bin <nombre>`.
 
-## 📁 Archivos Ejecutables
+## Archivos Ejecutables
 
 ### `generador.rs` (generador_slr)
 
@@ -259,105 +259,181 @@ Estado: 1 | Token: 'test' (tipo: id) | Pila: [0, 1]
 
 ---
 
-## 🔄 Flujo de Desarrollo
+### Tests del Análisis Semántico
+
+#### `test_cubo_semantico.rs`
+
+Propósito: Probar las reglas del cubo semántico
+
+Ejecución:
+```bash
+cargo run --bin test_cubo_semantico
+```
+
+Qué prueba:
+- Validación de operaciones aritméticas
+- Validación de operaciones relacionales
+- Promoción de tipos
+- Detección de errores de tipo
+
+#### `test_tabla_variables.rs`
+
+Propósito: Probar la tabla de variables
+
+Ejecución:
+```bash
+cargo run --bin test_tabla_variables
+```
+
+Qué prueba:
+- Agregar variables
+- Buscar variables
+- Detectar variables duplicadas
+
+#### `test_directorio_funciones.rs`
+
+Propósito: Probar el directorio de funciones
+
+Ejecución:
+```bash
+cargo run --bin test_directorio_funciones
+```
+
+Qué prueba:
+- Agregar funciones
+- Agregar variables a funciones
+- Búsqueda en diferentes alcances
+
+#### `test_contexto_semantico.rs`
+
+Propósito: Probar el contexto semántico completo
+
+Ejecución:
+```bash
+cargo run --bin test_contexto_semantico
+```
+
+Qué prueba:
+- Flujo completo del análisis semántico
+- Coordinación entre componentes
+
+---
+
+### Tests de Generación de Código Intermedio
+
+#### `test_generador_expresiones.rs`
+
+Propósito: Probar generación de cuádruplos para expresiones aritméticas
+
+Ejecución:
+```bash
+cargo run --bin test_generador_expresiones
+```
+
+Qué prueba:
+- Generación de cuádruplos para suma, resta, multiplicación, división
+- Manejo de precedencia de operadores
+- Uso de temporales
+
+#### `test_generador_relacionales.rs`
+
+Propósito: Probar generación de cuádruplos para expresiones relacionales
+
+Ejecución:
+```bash
+cargo run --bin test_generador_relacionales
+```
+
+Qué prueba:
+- Operadores relacionales (>, <, ==, !=)
+- Generación correcta de cuádruplos
+
+#### `test_generador_estatutos.rs`
+
+Propósito: Probar generación de cuádruplos para estatutos lineales
+
+Ejecución:
+```bash
+cargo run --bin test_generador_estatutos
+```
+
+Qué prueba:
+- Asignación
+- Lectura
+- Escritura
+
+#### `test_programa_completo.rs`
+
+Propósito: Probar compilación completa de un programa
+
+Ejecución:
+```bash
+cargo run --bin test_programa_completo
+```
+
+Qué prueba:
+- Análisis léxico, sintáctico y semántico
+- Generación de código intermedio
+- Programa completo con múltiples características
+
+---
+
+## Flujo de Desarrollo
 
 Orden recomendado para usar estos programas:
 
-```
 1. Modificar gramatica.txt
-         ↓
-2. cargo run --bin test_gramatica
-         ↓ (si pasa)
-3. cargo run --bin test_first_follow
-         ↓ (si los conjuntos son correctos)
-4. cargo run --bin test_lr0
-         ↓ (si el autómata está bien)
-5. cargo run --bin generador_slr
-         ↓ (genera las tablas)
-6. cargo run --bin test_sintactico
-         ↓ (prueba el parser completo)
-7. cargo run -- archivo.txt
-         ↓ (usar el compilador)
-```
+2. cargo run --bin test_gramatica (si pasa)
+3. cargo run --bin test_first_follow (si los conjuntos son correctos)
+4. cargo run --bin test_lr0 (si el autómata está bien)
+5. cargo run --bin generador_slr (genera las tablas)
+6. cargo run --bin test_sintactico (prueba el parser completo)
+7. cargo run --bin test_cubo_semantico (prueba análisis semántico)
+8. cargo run --bin test_generador_expresiones (prueba generación de código)
+9. cargo run -- archivo.txt (usar el compilador completo)
 
-## 🧪 Agregar Nuevos Tests
+## Resumen de Comandos
 
-Para agregar un nuevo programa de prueba:
+| Comando                                     | Propósito                    |
+| ------------------------------------------- | ---------------------------- |
+| `cargo run --bin generador_slr`             | Generar tablas SLR           |
+| `cargo run --bin test_gramatica`            | Validar gramática            |
+| `cargo run --bin test_first_follow`         | Ver FIRST/FOLLOW             |
+| `cargo run --bin test_lr0`                  | Ver autómata                 |
+| `cargo run --bin test_sintactico`           | Probar parser                |
+| `cargo run --bin test_cubo_semantico`       | Probar cubo semántico        |
+| `cargo run --bin test_tabla_variables`      | Probar tabla de variables    |
+| `cargo run --bin test_directorio_funciones` | Probar directorio funciones  |
+| `cargo run --bin test_contexto_semantico`   | Probar contexto semántico    |
+| `cargo run --bin test_generador_expresiones`| Probar gen. expresiones      |
+| `cargo run --bin test_generador_relacionales`| Probar gen. relacionales    |
+| `cargo run --bin test_generador_estatutos`  | Probar gen. estatutos        |
+| `cargo run --bin test_programa_completo`    | Probar compilación completa  |
 
-```rust
-// En src/bin/nuevo_test.rs
+## Tips de Debugging
 
-use compilador_rust::lexico;
-use compilador_rust::sintactico;
-
-fn main() {
-    println!("=== Mi Nuevo Test ===\n");
-
-    let codigo = r#"
-    programa mi_test;
-    inicio {
-        // Tu código aquí
-    }
-    fin
-    "#;
-
-    // Análisis léxico
-    let tokens = match lexico::analyze(codigo, &false) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("Error léxico: {}", e);
-            return;
-        }
-    };
-
-    // Análisis sintáctico
-    match sintactico::analyze(&tokens, &true) {
-        Ok(()) => println!("✓ Test pasado"),
-        Err(e) => eprintln!("✗ Test fallido: {}", e),
-    }
-}
-```
-
-Luego agregar en `Cargo.toml`:
-
-```toml
-[[bin]]
-name = "nuevo_test"
-path = "src/bin/nuevo_test.rs"
-```
-
-## 📊 Resumen de Comandos
-
-| Comando                             | Propósito          | Cuándo usar                     |
-| ----------------------------------- | ------------------ | ------------------------------- |
-| `cargo run --bin generador_slr`     | Generar tablas SLR | Después de cambiar gramática    |
-| `cargo run --bin test_gramatica`    | Validar gramática  | Verificar sintaxis de gramática |
-| `cargo run --bin test_first_follow` | Ver FIRST/FOLLOW   | Debugging de gramática          |
-| `cargo run --bin test_lr0`          | Ver autómata       | Entender construcción LR(0)     |
-| `cargo run --bin test_sintactico`   | Probar parser      | Validar parsing funcional       |
-
-## 🎯 Tips de Debugging
-
-**Si el generador falla:**
-
+Si el generador falla:
 1. Ejecuta `test_gramatica` primero
 2. Revisa errores de sintaxis en `gramatica.txt`
 3. Verifica que no haya símbolos no definidos
 
-**Si hay conflictos Shift/Reduce:**
-
+Si hay conflictos Shift/Reduce:
 1. Ejecuta `test_first_follow` para ver conjuntos
 2. Revisa si hay ambigüedad en la gramática
 3. Puede requerir factorizar o ajustar precedencia
 
-**Si el parser falla en test:**
-
-1. Ejecuta en modo verbose (`&true`)
+Si el parser falla en test:
+1. Ejecuta en modo verbose
 2. Mira en qué estado falla
 3. Revisa el autómata con `test_lr0`
 4. Verifica que el token esperado esté en FOLLOW
 
-## 🔗 Referencias
+Si la generación de cuádruplos falla:
+1. Ejecuta tests individuales de generación
+2. Verifica que el análisis semántico pase
+3. Revisa los puntos neurálgicos en acciones_semanticas.rs
 
-- [Cargo Book - Configuring a Target](https://doc.rust-lang.org/cargo/reference/cargo-targets.html)
-- [Testing in Rust](https://doc.rust-lang.org/book/ch11-00-testing.html)
+## Referencias
+
+- Cargo Book - Configuring a Target
+- Testing in Rust

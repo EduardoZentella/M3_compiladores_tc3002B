@@ -1,10 +1,10 @@
 # Módulo Sintáctico
 
-## 📋 Descripción
+## Descripción
 
-Este módulo implementa el **analizador sintáctico SLR(1)** del compilador. Valida que la secuencia de tokens generada por el análisis léxico cumple con la estructura gramatical del lenguaje.
+Este módulo implementa el analizador sintáctico SLR(1) del compilador. Valida que la secuencia de tokens generada por el análisis léxico cumple con la estructura gramatical del lenguaje.
 
-## 📁 Archivos
+## Archivos
 
 ### `mod.rs`
 
@@ -127,7 +127,33 @@ Cursor → [Token₁] [Token₂] [Token₃] ... [Token_n] [$]
    Vec<Regla>
    ```
 
-## 🔄 Flujo de Análisis Sintáctico
+### `acciones_semanticas.rs`
+
+Contiene la lógica de acciones semánticas ejecutadas durante el parsing bottom-up.
+
+**Función principal:**
+```rust
+pub fn ejecutar_accion_semantica(
+    cabeza: &str,
+    cuerpo_len: usize,
+    atributos: &[String],
+    tokens: &[Token],
+    contexto: &mut ContextoSemantico,
+    generador: &mut GeneradorCuadruplos,
+    nivel_verbose: usize,
+) -> Result<String, String>
+```
+
+**Responsabilidades:**
+- Ejecutar acciones semánticas al REDUCIR producciones
+- Coordinar con el contexto semántico (variables, funciones, tipos)
+- Invocar al generador de cuádruplos en puntos neuralágicos
+- Sintetizar atributos para propagación en el parse tree
+
+**Sistema de matching:**
+Usa pattern matching sobre `(cabeza, cuerpo_len)` para identificar cada producción y ejecutar su acción específica.
+
+## Flujo de Análisis Sintáctico
 
 ```
 Tokens del Lexer
@@ -148,7 +174,7 @@ Tokens del Lexer
    next        goto
 ```
 
-## 🎯 Ejemplo de Parsing
+## Ejemplo de Parsing
 
 **Input:** `x = 5 ;`
 
@@ -164,7 +190,7 @@ Tokens del Lexer
 | 6    | ...             | ...          | ...        | Continuar reducciones   |
 | n    | [0,2]           | $            | Accept     | ✓ Entrada válida        |
 
-## 🐛 Manejo de Errores
+## Manejo de Errores
 
 El parser detecta errores de sintaxis cuando:
 
@@ -186,7 +212,7 @@ El parser detecta errores de sintaxis cuando:
 - Estado del parser
 - (En modo verbose: pila de estados completa)
 
-## 🔍 Modo Verbose
+## Modo Verbose
 
 Cuando `is_verbose = true`, el parser imprime cada paso:
 
@@ -211,7 +237,7 @@ Estado: 2 | Token: '$' (tipo: $) | Pila: [0, 2]
 ✓ Análisis sintáctico completado exitosamente
 ```
 
-## 📊 Estadísticas de las Tablas
+## Estadísticas de las Tablas
 
 Para la gramática actual:
 
@@ -221,7 +247,7 @@ Para la gramática actual:
 - **Entradas en GOTO**: 124
 - **Producciones**: 70
 
-## 🧪 Ejemplo de Uso
+## Ejemplo de Uso
 
 ```rust
 use compilador_rust::lexico;
@@ -239,7 +265,7 @@ match sintactico::analyze(&tokens, &true) {
 }
 ```
 
-## 🔄 Regeneración de Tablas
+## Regeneración de Tablas
 
 Cuando modificas `gramatica.txt`, debes regenerar las tablas:
 
@@ -255,27 +281,20 @@ Este proceso:
 4. Genera las tablas ACTION y GOTO
 5. Escribe `tabla_slr.rs` con lazy_static
 
-## 🚀 Ventajas del Parsing SLR
+## Ventajas del Parsing SLR
 
-✅ **Determinista**: Una sola acción posible en cada estado
-✅ **Eficiente**: O(n) donde n = número de tokens
-✅ **Detección temprana**: Errores detectados en cuanto ocurren
-✅ **Table-driven**: Fácil de mantener y modificar (regenerar tablas)
+- Determinista: Una sola acción posible en cada estado
+- Eficiente: O(n) donde n = número de tokens
+- Detección temprana: Errores detectados en cuanto ocurren
+- Table-driven: Fácil de mantener y modificar (regenerar tablas)
 
-## ⚠️ Limitaciones
+## Limitaciones
 
-❌ **Gramáticas ambiguas**: No puede parsear gramáticas con conflictos Shift/Reduce
-❌ **Precedencia**: Requiere modificar la gramática para manejar precedencia de operadores
-❌ **Recuperación de errores**: Actualmente solo detecta el primer error
+- Gramáticas ambiguas: No puede parsear gramáticas con conflictos Shift/Reduce
+- Precedencia: Requiere modificar la gramática para manejar precedencia de operadores
+- Recuperación de errores: Actualmente solo detecta el primer error
 
-## 🔧 Próximas Mejoras
-
-- [ ] Construcción de Árbol de Sintaxis Abstracta (AST)
-- [ ] Recuperación de errores (error recovery)
-- [ ] Mejor reporte de errores con sugerencias
-- [ ] Soporte para gramáticas LALR(1) más potentes
-
-## 🔗 Referencias
+## Referencias
 
 - [SLR Parser - Wikipedia](https://en.wikipedia.org/wiki/Simple_LR_parser)
 - Dragon Book, Capítulo 4.7: LR Parsers

@@ -1,10 +1,10 @@
 # Módulo Léxico
 
-## 📋 Descripción
+## Descripción
 
-Este módulo implementa el **analizador léxico (lexer)** del compilador. Su función principal es convertir el código fuente (cadena de caracteres) en una secuencia de tokens que serán procesados por el analizador sintáctico.
+Este módulo implementa el analizador léxico (lexer) del compilador. Su función principal es convertir el código fuente (cadena de caracteres) en una secuencia de tokens que serán procesados por el analizador sintáctico.
 
-## 📁 Archivos
+## Archivos
 
 ### `token.rs`
 
@@ -133,7 +133,7 @@ Algoritmo principal del análisis léxico:
 4. Retornar lista de tokens
 ```
 
-## 🔄 Flujo de Análisis Léxico
+## Flujo de Análisis Léxico
 
 ```
 archivo.txt
@@ -158,16 +158,16 @@ analyze()
 ]
 ```
 
-## 🎯 Prioridad de Patrones
+## Prioridad de Patrones
 
-El orden en `REGLAS_TOKENS` es **crítico**:
+El orden en `REGLAS_TOKENS` es crítico:
 
-1. ✅ **Palabras reservadas primero**: Evita que "programa" sea reconocido como identificador
-2. ✅ **Constantes antes de identificadores**: `123abc` debe dar error, no ser "123" + "abc"
-3. ✅ **Operadores compuestos antes de simples**: `!=` antes que `!` y `=`
-4. ✅ **Patrones más específicos primero**: `3.14` debe ser flotante, no "3" + ".14"
+1. Palabras reservadas primero: Evita que "programa" sea reconocido como identificador
+2. Constantes antes de identificadores: `123abc` debe dar error, no ser "123" + "abc"
+3. Operadores compuestos antes de simples: `!=` antes que `!` y `=`
+4. Patrones más específicos primero: `3.14` debe ser flotante, no "3" + ".14"
 
-## 🐛 Manejo de Errores
+## Manejo de Errores
 
 El lexer detecta:
 
@@ -182,7 +182,7 @@ El lexer detecta:
   Error léxico en línea 3: simbolo no reconocido '"'
   ```
 
-## 🧪 Ejemplo de Uso
+## Ejemplo de Uso
 
 ```rust
 use compilador_rust::lexico::analyze;
@@ -210,7 +210,7 @@ match analyze(codigo, &true) {
 }
 ```
 
-## 📊 Complejidad
+## Complejidad
 
 - **Tiempo**: O(n) donde n = longitud del input
 
@@ -220,13 +220,13 @@ match analyze(codigo, &true) {
 - **Espacio**: O(t) donde t = número de tokens
   - Se almacena cada token encontrado
 
-## 🚀 Optimizaciones
+## Optimizaciones
 
 1. **lazy_static**: Los regex se compilan una sola vez al inicio
 2. **Cadenas prestadas**: Se usa `&str` en lugar de `String` cuando es posible
 3. **Match temprano**: Se detiene en el primer patrón que coincide
 
-## 🔧 Extensibilidad
+## Extensibilidad
 
 Para agregar un nuevo tipo de token:
 
@@ -265,7 +265,7 @@ lazy_static! {
 }
 ```
 
-## 🔗 Referencias
+## Referencias
 
 - [Lexical Analysis - Dragon Book](https://en.wikipedia.org/wiki/Lexical_analysis)
 - [Rust Regex Documentation](https://docs.rs/regex/)
