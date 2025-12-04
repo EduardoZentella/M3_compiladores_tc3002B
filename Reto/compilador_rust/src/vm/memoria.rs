@@ -155,6 +155,9 @@ pub struct MarcoMemoria {
     /// Valor de retorno de la función (si tiene)
     pub valor_retorno: Option<Valor>,
 
+    /// Destino donde copiar el valor de retorno (dirección de memoria)
+    pub destino_retorno: Option<usize>,
+
     /// Parámetros recibidos (para debug)
     pub parametros: Vec<Valor>,
 }
@@ -168,6 +171,7 @@ impl MarcoMemoria {
             memoria_temporal: SegmentoMemoria::new(),
             ip_retorno,
             valor_retorno: None,
+            destino_retorno: None,
             parametros: Vec::new(),
         }
     }

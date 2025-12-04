@@ -1,0 +1,56 @@
+programa test_recursividad;
+
+vars num, resultado : entero;
+
+entero factorial_recursivo(n : entero) {
+    vars temp : entero;
+
+    si (n == 0) entonces {
+        regresa 1;
+    } sino {
+        temp = n - 1;
+        temp = factorial_recursivo(temp);
+        temp = n * temp;
+        regresa temp;
+    };
+};
+
+entero fibonacci_recursivo(n : entero) {
+    vars temp1, temp2, suma : entero;
+
+    si (n == 0) entonces {
+        regresa 0;
+    };
+
+    si (n == 1) entonces {
+        regresa 1;
+    };
+
+    temp1 = n - 1;
+    temp1 = fibonacci_recursivo(temp1);
+
+    temp2 = n - 2;
+    temp2 = fibonacci_recursivo(temp2);
+
+    suma = temp1 + temp2;
+    regresa suma;
+};
+
+inicio {
+    escribe("=== Factorial Recursivo ===");
+    num = 6;
+    escribe("Factorial de:");
+    escribe(num);
+    resultado = factorial_recursivo(num);
+    escribe("Resultado:");
+    escribe(resultado);
+
+    escribe("=== Fibonacci Recursivo ===");
+    num = 20;
+    escribe("Fibonacci de:");
+    escribe(num);
+    resultado = fibonacci_recursivo(num);
+    escribe("Resultado:");
+    escribe(resultado);
+}
+fin

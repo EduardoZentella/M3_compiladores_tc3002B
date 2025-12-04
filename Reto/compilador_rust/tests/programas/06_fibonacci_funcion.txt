@@ -1,6 +1,6 @@
 programa test_fibonacci;
 
-vars pos, resultado : entero;
+vars pos, resultado, contador : entero;
 
 entero fibonacci(n : entero) {
     vars a, b, temp, i : entero;
@@ -16,16 +16,15 @@ entero fibonacci(n : entero) {
         i = i + 1;
     }
 
-    regresa b;
+    regresa a;
 };
 
 inicio {
-    pos = 7;
-    escribe("Fibonacci posicion:");
-    escribe(pos);
-
-    resultado = fibonacci(pos);
-    escribe("Resultado:");
-    escribe(resultado);
+    contador = 0;
+    mientras (contador < 21) haz {
+        resultado = fibonacci(contador);
+        escribe(resultado);
+        contador = contador + 1;
+    }
 }
 fin
